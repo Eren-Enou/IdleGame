@@ -25,3 +25,11 @@ Recruit comparisons now normalize candidate/peer to equal level without changing
 ### Review after five meaningful iterations
 
 Playability: complete local loop verified through the interface. Progression: Guild investments and farming change outcomes; frontier now changes recruitment and party capacity. Agency: farming/pushing, recruitment comparisons, role selection, frontline order and investments are available. Variety: coherent origins/classes and three boss mechanics; individual abilities remain limited. Stability: 36 tests plus browser persistence/farming/cross-tab checks. Complexity: no dependencies or disconnected currencies; expand existing primitives first. Direction: study mixed investments and deeper recovery; improve visible battle explanations and long-term scaling before adding breadth. Numerical results do not establish enjoyment; human playtesting remains valuable.
+
+## 2026-10-06 — Explain combat and investigate recovery
+
+Experiment 003 ran 150 one-hour recovery journeys with actual recruit/upgrade costs and validated complete late-session saves. Mixed investment outperformed training-only slightly while avoiding repeated defeats; a fourth ranger had a much larger effect. This evidence counters a simple conclusion that health investment is useless.
+
+Added a bounded live combat timeline and expandable final-room timeline; important ability and Gatekeeper actions are visible. Encounter RNG is now independent of recruitment RNG, with additive v1 defaults for older saves. Experiment 004 repeated opening/recovery studies and found no material balance change. All 40 tests pass, including unrelated recruitment leaving combat unchanged. DOM writes compare cached source strings so unchanged cards and open combat details remain stable.
+
+Browser confirmed live and final-room timeline rendering, including the Root Gatekeeper shield action. Expanded details remained open during idle updates. Follow-up timeline refinement includes status ticks and the final result, removes zero-healing noise, and explains shield absorption. Reformatted the stylesheet for maintenance without changing rules.

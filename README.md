@@ -18,6 +18,7 @@ Depth 5 unlocks expanded quarters. Every ten frontier depths raises the level of
 npm test
 npm run simulate
 node tools/party-study.js
+node tools/journey-study.js
 ```
 
 The engine has no browser dependencies. Seeded generation, one-second combat, and offline resolution use the same code. Content lives in `src/content.js`; development findings and continuation priorities live in `docs/`.

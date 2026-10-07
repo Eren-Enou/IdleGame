@@ -26,12 +26,14 @@ function comparison(a) {
   if (!c.peer) return `<p class="comparison">Adds a new role to your roster: ${c.role}.</p>`;
   return `<p class="comparison">Compared at level ${c.level} with ${esc(c.peer.name)}:<br>${delta(c.delta.hp)} HP · ${delta(c.delta.attack)} attack · ${delta(c.delta.armor)} armor.<br>Current stats above reflect this recruit's actual level.</p>`;
 }
+function timeline(events) { return `<ol class="combat-timeline">${events.map(event=>`<li><small>${event.time}s</small> ${esc(event.message)}</li>`).join('')}</ol>`; }
 function character(a, applicant = false) {
   const c = CLASSES[a.classId], o = ORIGINS[a.origin], t = E.stats(state,a), selected = state.party.includes(a.id);
   const disabled = applicant ? state.gold < E.recruitmentCost(state,a) || state.roster.length >= E.capacity(state) : !!state.expedition || (!selected && state.party.length >= E.partySlots(state));
   return `<article class="card ${selected?'selected':''}" style="--character:${c.color}"><div class="card-heading"><div class="portrait" aria-hidden="true">${c.icon}</div><div><h3>${esc(a.name)}</h3><div class="subtitle">${o.species} ${c.name} · Level ${a.level} · ${c.role}</div></div></div><div class="stats"><div>${t.hp}<span>HP</span></div><div>${t.attack}<span>ATK</span></div><div>${t.armor}<span>ARMOR</span></div><div>${t.speed}s<span>ATTACK</span></div></div><div class="trait">${o.trait} · ${o.name}</div><p class="origin-detail">${o.detail} Talent ${Math.round(a.talent*100)}%.</p><p><strong>${c.ability.name}</strong> — ${c.description}</p>${applicant?comparison(a):""}${!applicant?`${bar(a.xp,E.xpNeeded(a),'xp-bar')}<small>${a.xp} / ${E.xpNeeded(a)} XP</small>`:''}<button data-action="${applicant?'hire':'assign'}" data-id="${a.id}" ${disabled?'disabled':''} class="${applicant?'primary':''}">${applicant?E.recruitmentCost(state,a) === 0 ? 'Recruit relief volunteer · Free' : `Recruit · ${E.recruitmentCost(state,a)} gold`:selected?'✓ In party · Remove':'Assign to party'}</button>${!applicant?`<button class="dismiss" data-action="dismiss" data-id="${a.id}" ${state.expedition?'disabled':''}>Dismiss adventurer…</button>`:''}</article>`;
 }
-function html(id, content) { if ($(id).innerHTML !== content) $(id).innerHTML = content; }
+const rendered = new Map();
+function html(id, content) { if (rendered.get(id) !== content) { $(id).innerHTML = content; rendered.set(id,content); } }
 function render() {
   const s = state, e = s.expedition, targetDepth = e?.depth || (s.policy==='farm'?Math.min(s.farmDepth,Math.max(1,s.depth)):s.depth+1), region = E.stratum(targetDepth);
   $('gold').textContent = Math.floor(s.gold).toLocaleString();
@@ -52,7 +54,8 @@ function render() {
   $('refresh').disabled = s.gold < 10;
   html('upgrades', Object.entries(UPGRADES).map(([k,u])=>`<article class="card upgrade"><div class="rank">RANK ${s.upgrades[k]} / ${u.max}</div><h3>${u.name}</h3><p>${u.description}</p><button data-action="upgrade" data-key="${k}" ${s.gold<E.upgradeCost(s,k)||s.upgrades[k]>=u.max||s.depth<(u.unlockDepth||0)?'disabled':''}>${s.depth<(u.unlockDepth||0)?`Unlocks at depth ${u.unlockDepth}`:s.upgrades[k]>=u.max?'Fully developed':`Improve · ${E.upgradeCost(s,k).toLocaleString()} gold`}</button></article>`).join(''));
   const r = s.lastReport;
-  html('report', r ? `<strong>Last expedition · Depth ${r.depth}</strong> — ${esc(r.reason)} · ${r.seconds}s · +${r.reward} gold${r.win?"":"<p>Try farming a conquered room for XP and gold, then adjust the party or invest in the Guild. No adventurers were lost.</p>"}<div class="report-row">${r.units.map(u=>`<span>${esc(s.roster.find(a=>a.id===u.id)?.name||'Former adventurer')}: ${u.damage} damage / ${u.healing} healing / ${u.blocked ?? 0} shield absorbed / ${u.cleansed ?? 0} cleansed${u.survived?'':' / downed'}</span>`).join('')}</div>` : '');
+  html('combat-feed', e ? `<div class="battle-caption">LIVE COMBAT · SEED ${e.seed}</div>${e.events.length?timeline(e.events.slice(0,5)):'<p class="section-intro">The party enters the chamber.</p>'}` : '');
+  html('report', r ? `<strong>Last expedition · Depth ${r.depth}</strong> — ${esc(r.reason)} · ${r.seconds}s · +${r.reward} gold${r.win?"":"<p>Try farming a conquered room for XP and gold, then adjust the party or invest in the Guild. No adventurers were lost.</p>"}<div class="report-row">${r.units.map(u=>`<span>${esc(s.roster.find(a=>a.id===u.id)?.name||'Former adventurer')}: ${u.damage} damage / ${u.healing} healing / ${u.blocked ?? 0} shield absorbed / ${u.cleansed ?? 0} cleansed${u.survived?'':' / downed'}</span>`).join('')}</div><details><summary>Final combat moments${r.seed===null?'':` · seed ${r.seed}`}</summary>${timeline(r.events)}</details>` : '');
   html('log', s.log.slice(0,7).map(l=>`<li><small>${Math.floor(l.time/60)}:${String(l.time%60).padStart(2,'0')}</small>${esc(l.message)}</li>`).join(''));
 }
 document.addEventListener('click', event => {

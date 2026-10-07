@@ -14,7 +14,7 @@ Engine/content/UI in `src/engine.js`, `src/content.js`, `src/app.js`. All combat
 
 ## Recent validation
 
-All 36 tests pass. Experiments preserve 600-run baseline/revised progression and 2,400-encounter party comparisons. Twenty farming/investment recovery scenarios overcome the first wall. Browser confirmed the full loop, persistence, correct farming input, equal-level comparisons, reordering and cross-tab protection. Opening the second tab, buying infirmary, closing it and reloading the first preserved the newer save.
+All 40 tests pass. Experiments preserve opening progression, 2,400-encounter party comparisons, and 150 one-hour recovery journeys before/after RNG isolation. Every late-session save round-trips. Twenty farming/investment recovery scenarios overcome the first wall. Browser confirmed the full loop, persistence, correct farming input, equal-level comparisons, reordering, level 2 recruits at depth 11 and cross-tab protection. Opening the second tab, buying infirmary, closing it and reloading the first preserved the newer save.
 
 ## Known limitations / priorities
 
@@ -25,4 +25,6 @@ All 36 tests pass. Experiments preserve 600-run baseline/revised progression and
 - Browser integration checks currently manual through automation, engine tests repeatable via npm.
 - Single local browser save; cross-tab writes pause other tabs; no remote sync. Additive v1 defaults preserve old combat counters. Level cap 1,000 and Guild rank caps are numerical safety limits; an eventual interacting progression layer will be needed for much longer play.
 
-Next recommended task: run mixed-investment/deeper recovery studies and inspect battle explanations. Maintain coherent mechanics; do not add classes or currencies just to extend development. Browser verified frontier depth 11 yields new level 2 applicants at 35 gold while preserving existing recruits.
+Latest changes: combat owns an independent seeded RNG; live and final-room event timelines explain actions. Existing v1 fights/reports get safe defaults. Initial comparisons suggesting health was weak were qualified by experiment 003: mixed investment advances steadily and a fourth adventurer has major value.
+
+Browser checked the live timeline, expanded final report and preserved expanded state during idle updates. Next recommended task: investigate multi-hour progression and practical caps. Maintain coherent mechanics; do not add classes or currencies just to extend development.

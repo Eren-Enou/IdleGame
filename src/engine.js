@@ -27,6 +27,7 @@ export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
   return s;
 }
 function note(s, message) { s.log.unshift({ time: s.clock, message }); s.log.length = Math.min(s.log.length, 40); }
+function battleNote(e, message) { e.events.unshift({ time: e.elapsed, message }); e.events.length = Math.min(e.events.length,12); }
 export function recruit(s, id) {
   const a = s.applicants.find(a => a.id === id);
   if (!a || s.gold < recruitmentCost(s,a) || s.roster.length >= capacity(s)) return false;
@@ -68,7 +69,8 @@ export function makeEnemy(depth) {
 export function startExpedition(s) {
   if (s.expedition || !s.party.length) return false;
   const depth = s.policy === 'farm' ? Math.min(s.farmDepth, Math.max(1, s.depth)) : s.depth + 1;
-  s.expedition = { depth, elapsed: 0, seed: s.rng, enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, ...t, maxHp: t.hp, shield: 0, cooldown: 1, abilityCooldown: CLASSES[a.classId].ability.cooldown, status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
+  const seed = (random(s) * 4294967296) >>> 0;
+  s.expedition = { depth, elapsed: 0, seed, rng: seed, events: [], enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, ...t, maxHp: t.hp, shield: 0, cooldown: 1, abilityCooldown: CLASSES[a.classId].ability.cooldown, status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
   return true;
 }
 export function retreat(s) { if (!s.expedition) return false; s.expedition = null; s.auto = false; note(s, 'Expedition recalled safely. No rewards from the unfinished room.'); return true; }
@@ -79,8 +81,10 @@ function hit(target, amount, pierce = false) {
   const damage = Math.min(target.hp, n); target.hp -= damage; return damage;
 }
 function statuses(u, sources = []) {
-  for (const x of u.status) { if (u.hp > 0) { const damage = hit(u, x.power, true), source = sources.find(a => a.id === x.source); if (source) source.damage += damage; } x.remaining--; }
+  let total=0;
+  for (const x of u.status) { if (u.hp > 0) { const damage = hit(u, x.power, true), source = sources.find(a => a.id === x.source); total+=damage; if (source) source.damage += damage; } x.remaining--; }
   u.status = u.status.filter(x => x.remaining > 0);
+  return total;
 }
 function endRoom(s, win) {
   const e = s.expedition, reward = win ? Math.round((12 + e.depth * 3) * (e.enemy.boss ? 1.8 : 1)) : 0;
@@ -96,7 +100,8 @@ function endRoom(s, win) {
     }
   } else { s.records.defeats++; s.auto = false; }
   const reason = win ? 'Victory' : e.elapsed >= 180 ? 'Stalemate: recalled after 180 seconds' : 'Defeat: the party was overwhelmed';
-  s.lastReport = { depth: e.depth, win, reward, seconds: e.elapsed, reason, units: e.units.map(u => ({ id: u.id, damage: u.damage, healing: u.healing, blocked: u.blocked, cleansed: u.cleansed, survived: u.hp > 0 })) };
+  battleNote(e,win?`${e.enemy.name} defeated.`:reason);
+  s.lastReport = { depth: e.depth, seed: e.seed, events: e.events, win, reward, seconds: e.elapsed, reason, units: e.units.map(u => ({ id: u.id, damage: u.damage, healing: u.healing, blocked: u.blocked, cleansed: u.cleansed, survived: u.hp > 0 })) };
   note(s, `${reason} at depth ${e.depth}. ${win ? `+${reward} gold. Party recovered.` : 'Everyone returned safely. Try training, a healer, or a shallower farm.'}`);
   s.expedition = null;
 }
@@ -104,20 +109,21 @@ export function tick(s) {
   s.clock++; s.applicantTimer++;
   if (s.applicantTimer >= 120) { s.applicantTimer = 0; while (s.applicants.length < 3) s.applicants.push(generate(s)); }
   if (!s.expedition) { if (s.auto) startExpedition(s); return; }
-  const e = s.expedition; e.elapsed++; statuses(e.enemy, e.units);
+  const e = s.expedition; e.elapsed++; const bleed= statuses(e.enemy, e.units);
+  if(bleed>0) battleNote(e,`Bleed deals ${bleed} damage to ${e.enemy.name}.`);
   for (const u of e.units) {
-    statuses(u); if (u.hp <= 0 || e.enemy.hp <= 0) continue;
+    const harm=statuses(u); if(harm>0) battleNote(e,`${s.roster.find(a=>a.id===u.id).name} suffers ${harm} damage from harmful statuses${u.hp<=0?' — downed':''}.`); if (u.hp <= 0 || e.enemy.hp <= 0) continue;
     const a = s.roster.find(a => a.id === u.id), c = CLASSES[a.classId];
     if (--u.abilityCooldown <= 0) {
       const ability = c.ability; u.abilityCooldown = ability.cooldown;
-      if (ability.effect === 'shield') u.shield = Math.min(Math.round(u.maxHp * .6), u.shield + Math.round(u.attack * ability.scale));
+      if (ability.effect === 'shield') { const before=u.shield; u.shield = Math.min(Math.round(u.maxHp * .6), u.shield + Math.round(u.attack * ability.scale)); battleNote(e,`${a.name}: Bulwark grants ${u.shield-before} shield.`); }
       if (ability.effect === 'heal') {
         const target = e.units.filter(x => x.hp > 0).sort((a,b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-        if (target) { const healing = Math.min(target.maxHp - target.hp, Math.round(u.attack * ability.scale)); target.hp += healing; u.healing += healing; if (u.cleanse && target.status.length) { target.status.shift(); u.cleansed++; } }
+        if (target) { const healing = Math.min(target.maxHp - target.hp, Math.round(u.attack * ability.scale)); target.hp += healing; u.healing += healing; let cleansed=''; if (u.cleanse && target.status.length) { cleansed=target.status.shift().type; u.cleansed++; } if(healing>0||cleansed) battleNote(e,`${a.name} heals ${s.roster.find(a=>a.id===target.id).name} for ${healing}${cleansed?` and cleanses ${cleansed}`:''}.`); }
       }
-      if (ability.effect === 'bleed') { u.damage += hit(e.enemy, u.attack); e.enemy.status.push({ type: 'bleed', source: u.id, power: Math.round(u.attack * ability.scale), remaining: 4 }); }
+      if (ability.effect === 'bleed') { u.damage += hit(e.enemy, u.attack); e.enemy.status.push({ type: 'bleed', source: u.id, power: Math.round(u.attack * ability.scale), remaining: 4 }); battleNote(e,`${a.name}: Barbed arrow inflicts a four-second bleed.`); }
     }
-    if (--u.cooldown <= 0 && e.enemy.hp > 0) { u.cooldown = u.speed; u.damage += hit(e.enemy, u.attack * (random(s) < .1 ? 1.5 : 1)); }
+    if (--u.cooldown <= 0 && e.enemy.hp > 0) { u.cooldown = u.speed; const critical=random(e)<.1, damage=hit(e.enemy,u.attack*(critical?1.5:1)); u.damage+=damage; battleNote(e,`${a.name} ${critical?'critically hits':'hits'} for ${damage} damage.`); }
   }
   if (e.enemy.hp <= 0) { endRoom(s, true); return; }
   const alive = e.units.filter(u => u.hp > 0);
@@ -125,7 +131,8 @@ export function tick(s) {
   if (--e.enemy.cooldown <= 0) {
     e.enemy.cooldown = 2;
     const target = alive.find(u => s.roster.find(a => a.id === u.id).classId === 'guardian') || alive[0];
-    const damage = hit(target, e.enemy.attack);
+    const beforeShield=target.shield, damage = hit(target, e.enemy.attack), absorbed=beforeShield-target.shield;
+    battleNote(e,`${e.enemy.name} hits ${s.roster.find(a=>a.id===target.id).name} for ${damage} damage${absorbed?`, ${absorbed} absorbed by shield`:''}${target.hp<=0?' — downed':''}.`);
     if (e.enemy.region === 1) target.status.push({ type: 'burn', power: 2, remaining: 3 });
     if (e.enemy.region === 2) e.enemy.hp = Math.min(e.enemy.maxHp, e.enemy.hp + Math.round(damage * .3));
     if (e.enemy.boss && e.elapsed % 6 === 0) {
@@ -133,6 +140,7 @@ export function tick(s) {
       if (ability.effect === 'shield') e.enemy.shield = Math.min(Math.round(e.enemy.maxHp * .3), e.enemy.shield + Math.round(e.enemy.maxHp * ability.scale));
       if (ability.effect === 'cleave') for (const u of e.units.filter(u => u.hp > 0)) hit(u, e.enemy.attack * ability.scale);
       if (ability.effect === 'bleed') target.status.push({ type: 'bleed', power: Math.round(e.enemy.attack * ability.scale), remaining: 4 });
+      battleNote(e,`${e.enemy.name}: ${ability.effect==='shield'?'regrows a shield':ability.effect==='cleave'?'lashes the entire party':'inflicts a four-second wound'}.`);
     }
   }
   if (e.units.every(u => u.hp <= 0) || e.elapsed >= 180) endRoom(s, false);
@@ -150,6 +158,7 @@ function validateSave(s) {
   const fail = () => { throw new Error('Save data is invalid or from an unsupported version.'); };
   const num = (n, max = 1e12) => Number.isFinite(n) && n >= 0 && n <= max;
   const int = (n, max = 1e12) => num(n,max) && Number.isInteger(n);
+  const events = list => Array.isArray(list) && list.length <= 12 && list.every(l => l && int(l.time,180) && typeof l.message === 'string' && l.message.length <= 300);
   if (!s || s.version !== VERSION || !int(s.rng,4294967295) || !int(s.nextId) || !num(s.gold) || !int(s.depth,1000000) || !num(s.savedAt,1e15) || !int(s.clock) || !int(s.applicantTimer,119) || typeof s.auto !== 'boolean' || !['push','farm'].includes(s.policy) || !int(s.farmDepth,1000000) || s.farmDepth < 1) fail();
   if (!s.upgrades || Object.keys(UPGRADES).some(k => !int(s.upgrades[k], UPGRADES[k].max))) fail();
   if (!Array.isArray(s.roster) || s.roster.length > capacity(s) || !Array.isArray(s.applicants) || s.applicants.length > 3) fail();
@@ -163,10 +172,12 @@ function validateSave(s) {
     const r = s.lastReport;
     if (!r || !int(r.depth,1000000) || !num(r.reward) || !int(r.seconds,180) || typeof r.win !== 'boolean' || typeof r.reason !== 'string' || r.reason.length > 100 || !Array.isArray(r.units) || r.units.length > 4 || r.units.some(u => !u || !int(u.id) || !num(u.damage) || !num(u.healing) || typeof u.survived !== 'boolean')) fail();
     for (const u of r.units) { u.blocked ??= 0; u.cleansed ??= 0; if (!num(u.blocked) || !int(u.cleansed)) fail(); }
+    r.events ??= []; r.seed ??= null; if (!events(r.events) || (r.seed !== null && !int(r.seed,4294967295))) fail();
   }
   if (s.expedition !== null) {
     const e = s.expedition;
     if (!e || !int(e.depth,1000000) || e.depth < 1 || !int(e.elapsed,180) || !int(e.seed,4294967295) || !Array.isArray(e.units) || e.units.length !== s.party.length || !e.units.length || new Set(e.units.map(u => u.id)).size !== e.units.length) fail();
+    e.events ??= []; e.rng ??= s.rng; if (!events(e.events) || !int(e.rng,4294967295)) fail();
     for (const u of [...e.units, e.enemy]) {
       if (!u || ['hp','maxHp','attack','armor','shield','cooldown'].some(k => !num(u[k])) || u.maxHp <= 0 || u.hp > u.maxHp || !Array.isArray(u.status) || u.status.length > 100 || u.status.some(x => !x || !['burn','bleed'].includes(x.type) || !num(x.power) || !int(x.remaining,4))) fail();
     }
