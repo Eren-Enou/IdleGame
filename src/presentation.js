@@ -29,6 +29,7 @@ export function reportAdvice(report) {
   const standing=report.units.filter(u=>u.survived).length;
   if(report.seconds>=180 && standing) return `Time ran out with ${standing} adventurer${standing===1?'':'s'} still standing. More sustained damage or fewer support slots may help.`;
   if(report.enemy?.boss && report.enemy.region===1) return 'The Librarian lashes the whole party. Guardians cannot intercept this attack; party health, healing or faster kills can help.';
+  if(report.enemy?.region===3) return `Mirror enemies return direct health damage to its attacker; bleed avoids reflection and shields absorb it. More healing or a different equipment/technique balance can protect the back line.${report.enemy.boss?' The Adjudicator also singles out the highest attack power.':''}`;
   if(report.enemy?.healing>0) return `The enemy recovered ${report.enemy.healing} health through siphoning. Sustained damage must outpace that recovery.`;
   const front=report.units.find(u=>u.id===report.frontId);
   if(front && !front.survived) return `${front.name} went down on the front line. More health, shielding or healing can keep direct attacks away from the back line.`;

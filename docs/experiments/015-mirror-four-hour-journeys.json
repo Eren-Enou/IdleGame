@@ -1,0 +1,58 @@
+{
+  "experiment": "recovery-journeys",
+  "seedRange": [
+    1,
+    20
+  ],
+  "duration": 14400,
+  "results": [
+    {
+      "policy": "training",
+      "runs": 20,
+      "depth": {
+        "min": 521,
+        "mean": 546.4,
+        "max": 574
+      },
+      "meanDefeats": 31,
+      "meanPushResumptions": 30.7,
+      "meanTraining": 17,
+      "meanInfirmary": 0,
+      "meanLevel": 295.1,
+      "meanGold": 92500.8,
+      "fourthRecruited": 0
+    },
+    {
+      "policy": "mixed",
+      "runs": 20,
+      "depth": {
+        "min": 604,
+        "mean": 642.8,
+        "max": 668
+      },
+      "meanDefeats": 0.1,
+      "meanPushResumptions": 0.1,
+      "meanTraining": 15,
+      "meanInfirmary": 16,
+      "meanLevel": 263.8,
+      "meanGold": 82124.2,
+      "fourthRecruited": 0
+    },
+    {
+      "policy": "fourth",
+      "runs": 20,
+      "depth": {
+        "min": 859,
+        "mean": 887.1,
+        "max": 917
+      },
+      "meanDefeats": 0,
+      "meanPushResumptions": 0,
+      "meanTraining": 16.2,
+      "meanInfirmary": 17,
+      "meanLevel": 363.4,
+      "meanGold": 218254.2,
+      "fourthRecruited": 20
+    }
+  ]
+}

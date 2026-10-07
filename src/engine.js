@@ -137,12 +137,13 @@ export function applyPartyPlan(s,slot){
   note(s,`${plan.name} party plan applied.`);return true;
 }
 function abilityCooldown(a) { return abilityFor(a).cooldown+(EQUIPMENT[a.equipment]?.cooldown || 0); }
-export function stratum(depth) { return STRATA[Math.floor((depth - 1) / 10) % STRATA.length]; }
+export function regionIndex(depth) { return Math.floor((depth - 1) / 10) % STRATA.length; }
+export function stratum(depth) { return STRATA[regionIndex(depth)]; }
 export function makeEnemy(depth) {
-  const boss = depth % 5 === 0, region = Math.floor((depth - 1) / 10) % 3;
+  const boss = depth % 5 === 0, region = regionIndex(depth);
   const scale = (1 + depth * .18) * (1 + Math.floor(depth / 30) * .25);
   const hp = Math.round(70 * scale * (boss ? 2.3 : 1));
-  return { name: boss ? GATEKEEPERS[region].name : stratum(depth).enemies[(depth - 1) % 3], hp, maxHp: hp, attack: Math.round((5 + depth * 1.5) * (boss ? 1.35 : 1)), armor: boss ? 3 : 0, cooldown: 2, status: [], shield: boss ? Math.round(hp * .15) : 0, boss, region, blocked: 0, healing: 0 };
+  return { name: boss ? GATEKEEPERS[region].name : stratum(depth).enemies[(depth - 1) % 3], hp, maxHp: hp, attack: Math.round((5 + depth * 1.5) * (boss ? 1.35 : 1)), armor: boss ? 3 : 0, cooldown: 2, status: [], shield: boss ? Math.round(hp * .15) : 0, boss, region, blocked: 0, healing: 0, reflection:STRATA[region].reflection||0, reflected:0 };
 }
 export function startExpedition(s) {
   if (s.expedition || !s.party.length) return false;
@@ -178,6 +179,15 @@ function statuses(u, sources = []) {
   u.status = u.status.filter(x => x.remaining > 0);
   return total;
 }
+function directHit(e,u,amount){
+  const damage=hit(e.enemy,amount);u.damage+=damage;
+  const returned=Math.round(damage*e.enemy.reflection);
+  if(returned>0){
+    const before=u.shield,taken=hit(u,returned,true);e.enemy.reflected+=taken;
+    battleNote(e,`${e.enemy.name} reflects ${taken} damage to ${u.name}${before>u.shield?`, ${before-u.shield} absorbed by shield`:''}${u.hp<=0?' — downed':''}.`);
+  }
+  return damage;
+}
 function endRoom(s, win) {
   const e = s.expedition, reward = win ? Math.round((12 + e.depth * 3) * (e.enemy.boss ? 1.8 : 1)) : 0;
   for(const u of e.units){
@@ -190,6 +200,7 @@ function endRoom(s, win) {
     const oldDepth = s.depth;
     s.depth = Math.max(s.depth, e.depth); s.records.wins++;
     if (oldDepth < 5 && s.depth >= 5) note(s,'The first Gatekeeper falls. Expanded quarters can now unlock a fourth party slot.');
+    if (oldDepth < 30 && s.depth >= 30) note(s,'Beyond the Sanctum, the Mirror Halls open. Direct damage returns to its attacker; prepare shields, healing or bleed before entering.');
     if (Math.floor(oldDepth / 10) < Math.floor(s.depth / 10)) note(s,`Word of your Guild spreads. New applicants now arrive at level ${Math.min(MAX_LEVEL,1+Math.floor(s.depth/10))}. Existing applicants stay available.`);
     for (const u of e.units) {
       const a = s.roster.find(a => a.id === u.id); a.xp = Math.min(1e12,a.xp + 8 + e.depth * 2);
@@ -200,7 +211,7 @@ function endRoom(s, win) {
   const reason = win ? 'Victory' : e.elapsed >= 180 ? 'Stalemate: recalled after 180 seconds' : 'Defeat: the party was overwhelmed';
   battleNote(e,win?`${e.enemy.name} defeated.`:reason);
   s.lastReport = { depth: e.depth, at: s.clock, seed: e.seed, events: e.events, win, reward, seconds: e.elapsed, reason, frontId: e.frontId,
-    enemy: { name: e.enemy.name, hp: e.enemy.hp, maxHp: e.enemy.maxHp, blocked: e.enemy.blocked, healing: e.enemy.healing, boss: e.enemy.boss, region: e.enemy.region },
+    enemy: { name: e.enemy.name, hp: e.enemy.hp, maxHp: e.enemy.maxHp, blocked: e.enemy.blocked, healing: e.enemy.healing, boss: e.enemy.boss, region: e.enemy.region, reflected:e.enemy.reflected },
     units: e.units.map(u => ({ id: u.id, name: u.name, classId: u.classId, level: u.level, technique:u.technique, equipment: u.equipment, taken: u.taken, damage: u.damage, healing: u.healing, blocked: u.blocked, cleansed: u.cleansed, survived: u.hp > 0 })) };
   s.reports.unshift(s.lastReport); s.reports.length=Math.min(s.reports.length,8);
   note(s, `${reason} at depth ${e.depth}. ${win ? `+${reward} gold. Party recovered.` : 'Everyone returned safely. Try training, a healer, or a shallower farm.'}`);
@@ -232,9 +243,9 @@ export function tick(s) {
         const target = e.units.filter(x => x.hp > 0).sort((a,b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
         if (target) { const healing = Math.min(target.maxHp - target.hp, Math.round(power * ability.scale)); target.hp += healing; u.healing += healing; let cleansed=''; if (u.cleanse && target.status.length) { cleansed=target.status.shift().type; u.cleansed++; } if(healing>0||cleansed) battleNote(e,`${a.name}: ${ability.name} heals ${s.roster.find(a=>a.id===target.id).name} for ${healing}${cleansed?` and cleanses ${cleansed}`:''}.`); }
       }
-      if (ability.effect === 'bleed') { u.damage += hit(e.enemy, power*ability.directScale); e.enemy.status.push({ type: 'bleed', source: u.id, power: Math.round(power * ability.scale), remaining: 4 }); battleNote(e,`${a.name}: ${ability.name} inflicts a four-second bleed.`); }
+      if (ability.effect === 'bleed') { directHit(e,u,power*ability.directScale); e.enemy.status.push({ type: 'bleed', source: u.id, power: Math.round(power * ability.scale), remaining: 4 }); battleNote(e,`${a.name}: ${ability.name} inflicts a four-second bleed.`); }
     }
-    if (--u.cooldown <= 0 && e.enemy.hp > 0) { u.cooldown = u.speed; const critical=random(e)<.1, damage=hit(e.enemy,combatPowers(u).basic*(critical?1.5:1)); u.damage+=damage; battleNote(e,`${a.name} ${critical?'critically hits':'hits'} for ${damage} damage.`); }
+    if (u.hp>0 && --u.cooldown <= 0 && e.enemy.hp > 0) { u.cooldown = u.speed; const critical=random(e)<.1, damage=directHit(e,u,combatPowers(u).basic*(critical?1.5:1)); battleNote(e,`${a.name} ${critical?'critically hits':'hits'} for ${damage} damage.`); }
   }
   if (e.enemy.hp <= 0) { endRoom(s, true); return; }
   const alive = e.units.filter(u => u.hp > 0);
@@ -251,7 +262,8 @@ export function tick(s) {
       if (ability.effect === 'shield') e.enemy.shield = Math.min(Math.round(e.enemy.maxHp * .3), e.enemy.shield + Math.round(e.enemy.maxHp * ability.scale));
       if (ability.effect === 'cleave') for (const u of e.units.filter(u => u.hp > 0)) hit(u, e.enemy.attack * ability.scale);
       if (ability.effect === 'bleed') target.status.push({ type: 'bleed', power: Math.round(e.enemy.attack * ability.scale), remaining: 4 });
-      battleNote(e,`${e.enemy.name}: ${ability.effect==='shield'?'regrows a shield':ability.effect==='cleave'?'lashes the entire party':'inflicts a four-second wound'}.`);
+      if (ability.effect === 'strongest') { const strongest=e.units.filter(u=>u.hp>0).sort((a,b)=>b.attack-a.attack)[0]; if(strongest){const damage=hit(strongest,e.enemy.attack*ability.scale);battleNote(e,`${e.enemy.name} singles out ${strongest.name} for ${damage} damage${strongest.hp<=0?' — downed':''}.`);} }
+      else battleNote(e,`${e.enemy.name}: ${ability.effect==='shield'?'regrows a shield':ability.effect==='cleave'?'lashes the entire party':'inflicts a four-second wound'}.`);
     }
   }
   if (e.units.every(u => u.hp <= 0) || e.elapsed >= 180) endRoom(s, false);
@@ -308,7 +320,7 @@ function validateSave(s) {
     r.events ??= []; r.seed ??= null; r.frontId ??= null; r.enemy ??= null; r.at ??= null;
     if (!events(r.events) || (r.seed !== null && !int(r.seed,4294967295)) || (r.frontId!==null&&!r.units.some(u=>u.id===r.frontId)) || (r.at!==null&&!int(r.at))) fail();
     const enemy=r.enemy;
-    if(enemy!==null && (!enemy||typeof enemy.name!=='string'||enemy.name.length>80||!num(enemy.hp)||!num(enemy.maxHp)||enemy.maxHp<=0||enemy.hp>enemy.maxHp||!num(enemy.blocked)||!num(enemy.healing)||typeof enemy.boss!=='boolean'||!int(enemy.region,2))) fail();
+    if(enemy!==null){if(!enemy||typeof enemy!=='object')fail();enemy.reflected??=0;if(typeof enemy.name!=='string'||enemy.name.length>80||!num(enemy.hp)||!num(enemy.maxHp)||enemy.maxHp<=0||enemy.hp>enemy.maxHp||!num(enemy.blocked)||!num(enemy.healing)||!num(enemy.reflected)||typeof enemy.boss!=='boolean'||!int(enemy.region,STRATA.length-1))fail();}
   };
   if(s.lastReport!==null) validateReport(s.lastReport);
   s.reports ??= s.lastReport?[s.lastReport]:[]; if(!Array.isArray(s.reports)||s.reports.length>8) fail();
@@ -324,7 +336,7 @@ function validateSave(s) {
     e.frontId ??= e.units.find(u=>s.roster.find(a=>a.id===u.id).classId==='guardian')?.id || e.units[0].id;
     if(!s.party.includes(e.frontId)) fail();
     for(const u of e.units){ const actor=s.roster.find(a=>a.id===u.id); if(u.technique===undefined)u.technique=actor.technique; if(u.technique!==null && (!Object.hasOwn(TECHNIQUES,u.technique)||TECHNIQUES[u.technique].classId!==actor.classId)) fail(); u.name ??= actor.name; u.classId ??= actor.classId; u.level ??= actor.level; u.taken ??= 0; if(typeof u.name!=='string'||u.name.length>40||u.classId!==actor.classId||!int(u.level,MAX_LEVEL)||u.level<1||!num(u.taken)) fail(); u.equipment ??= null; if(u.equipment!==null && !s.equipmentUnlocked.includes(u.equipment)) fail(); }
-    e.enemy.blocked ??= 0; e.enemy.healing ??= 0; if(!num(e.enemy.blocked)||!num(e.enemy.healing)) fail();
-    if (typeof e.enemy.name !== 'string' || e.enemy.name.length > 80 || typeof e.enemy.boss !== 'boolean' || !int(e.enemy.region,2)) fail();
+    e.enemy.blocked ??= 0; e.enemy.healing ??= 0; e.enemy.reflection??=0; e.enemy.reflected??=0; if(!num(e.enemy.blocked)||!num(e.enemy.healing)||!num(e.enemy.reflection,1)||!num(e.enemy.reflected)) fail();
+    if (typeof e.enemy.name !== 'string' || e.enemy.name.length > 80 || typeof e.enemy.boss !== 'boolean' || !int(e.enemy.region,STRATA.length-1)) fail();
   }
 }

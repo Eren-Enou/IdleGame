@@ -18,11 +18,13 @@ export const STRATA = [
   { name: 'The Rootways', subtitle: 'Old roots. Older debts.', enemies: ['Root rat', 'Moss crawler', 'Tunnel brigand'], hazard: 'Ordinary encounters. A guardian can protect the back line.' },
   { name: 'Ember Archive', subtitle: 'The books are still burning.', enemies: ['Ash scribe', 'Cinder moth', 'Ember sentinel'], hazard: 'Enemy attacks burn for 2 damage over each of the next 3 seconds.' },
   { name: 'Hollow Sanctum', subtitle: 'Something listens beneath the stone.', enemies: ['Hollow acolyte', 'Bone warden', 'Pale watcher'], hazard: 'Enemies siphon health on attacks. Sustained damage matters here.' },
+  { name: 'The Mirror Halls', subtitle: 'Every triumph has a sharp reflection.', enemies: ['Glass duelist', 'Silver echo', 'Mirror custodian'], reflection: .15, hazard: 'Direct hits return 15% of health damage to their attacker, ignoring armor. Shields absorb it; bleed does not reflect. Clerics can protect the back line.' },
 ];
 export const GATEKEEPERS = [
   { name: 'Rootbound Gatekeeper', effect: 'shield', scale: .08, description: 'Every third attack, regrows a shield worth 8% of maximum health. Sustained damage breaks through.' },
   { name: 'Cinder Librarian', effect: 'cleave', scale: .55, description: 'Every third attack, lashes the entire party for 55% attack damage. A guardian cannot intercept it; healers and health help.' },
   { name: 'The Hollow Prior', effect: 'bleed', scale: .12, description: 'Every third attack, wounds the front line for 4 seconds. Infirmary rank 1 lets Mending light cleanse one harmful status.' },
+  { name: 'The Silver Adjudicator', effect: 'strongest', scale: .7, description: 'Every third attack, strikes the living adventurer with the highest attack power for 70% enemy attack. Guardians cannot intercept this extra strike.' },
 ];
 export const EQUIPMENT = {
   steel: { name: "Soldier's seal", cost: 120, cooldown: 2, description: 'Basic physical attacks gain 35% damage. Abilities take 2 extra seconds to recharge.', modifiers: [{ trigger: 'attack', tags: ['physical'], factor: 1.35 }] },

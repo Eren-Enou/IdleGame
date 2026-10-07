@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import * as E from '../src/engine.js';
+import {STRATA} from '../src/content.js';
 
 const runs=Number(process.argv[2]||20);
 if(!Number.isInteger(runs)||runs<1||runs>100)throw new Error('Use 1–100 seeds.');
@@ -29,7 +30,7 @@ for(const policy of ['three','four','ritual-four']){
    E.tick(s);
    if(checkpoints.includes(t)){
     assert.deepEqual(E.restore(E.serialize(s,0),0).state,s);
-    rows.push({seconds:t,depth:s.depth,level:s.roster[0].level,gold:s.gold,wins:s.records.wins,defeats:s.records.defeats,training:s.upgrades.training,infirmary:s.upgrades.infirmary,cappedAt,lastInvestment,fourthAt,equipmentAt,active:s.auto,regionsVisited:Math.min(3,Math.ceil(s.depth/10)),regionCycles:Math.floor(s.depth/30)});
+    rows.push({seconds:t,depth:s.depth,level:s.roster[0].level,gold:s.gold,wins:s.records.wins,defeats:s.records.defeats,training:s.upgrades.training,infirmary:s.upgrades.infirmary,cappedAt,lastInvestment,fourthAt,equipmentAt,active:s.auto,regionCycles:Math.floor(s.depth/(10*STRATA.length))});
    }
   }
  }
@@ -39,4 +40,4 @@ for(const policy of ['three','four','ritual-four']){
   results.push({policy,seconds,runs,depth:mean('depth'),level:mean('level'),gold:mean('gold'),wins:mean('wins'),defeats:mean('defeats'),training:mean('training'),infirmary:mean('infirmary'),capped:capped.length,meanCapMinute:capped.length?Math.round(capped.reduce((n,r)=>n+r.cappedAt,0)/capped.length/60*10)/10:null,minutesSinceInvestment:Math.round((seconds-mean('lastInvestment'))/60*10)/10,fourthRecruited:cohort.filter(r=>r.fourthAt!==null).length,patternCommissioned:cohort.filter(r=>r.equipmentAt!==null).length,activeOrders:cohort.filter(r=>r.active).length,regionCycles:mean('regionCycles')});
  }
 }
-console.log(JSON.stringify({experiment:'veteran-capability-progression',seedRange:[1,runs],checkpoints,results},null,2));
+console.log(JSON.stringify({experiment:'veteran-capability-progression',regions:STRATA.map(r=>r.name),cycleDepth:10*STRATA.length,seedRange:[1,runs],checkpoints,results},null,2));
