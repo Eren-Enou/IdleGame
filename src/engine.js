@@ -17,7 +17,7 @@ export function generate(s, forcedClass) {
   const origin = pick(s, Object.keys(ORIGINS).filter(k => !forcedClass || ORIGINS[k].classes.includes(forcedClass)));
   const o = ORIGINS[origin], classId = forcedClass || pick(s, o.classes.filter(c=>s.depth>=(CLASSES[c].unlockDepth||0)));
   const a={ id: s.nextId++, name: adventurerName(s,origin), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(MAX_LEVEL,1 + Math.floor(s.depth / 10)), xp: 0, equipment: null, technique:null, career:freshCareer(s.clock) };
-  if(s.depth>=10) a.technique=pick(s,[null,null,...Object.keys(TECHNIQUES).filter(key=>TECHNIQUES[key].classId===classId)]);
+  if(s.depth>=10) a.technique=pick(s,[null,null,...Object.keys(TECHNIQUES).filter(key=>TECHNIQUES[key].classId===classId&&s.depth>=(TECHNIQUES[key].unlockDepth||10))]);
   abilityFor(a);
   return a;
 }
@@ -217,6 +217,10 @@ function directHit(e,u,amount){
   }
   return damage;
 }
+function grantShield(caster,target,amount){
+  const before=target.shield;target.shield=Math.min(Math.round(target.maxHp*.6),target.shield+Math.round(amount));
+  const granted=target.shield-before;if(caster.warded!==null)caster.warded+=granted;return granted;
+}
 function endRoom(s, win) {
   const e = s.expedition, reward = win ? Math.round((12 + e.depth * 3) * (e.enemy.boss ? 1.8 : 1)) : 0;
   for(const u of e.units){
@@ -232,6 +236,7 @@ function endRoom(s, win) {
     if (oldDepth < 30 && s.depth >= 30) note(s,'Beyond the Sanctum, the Mirror Halls open. Direct damage returns to its attacker; prepare shields, healing or bleed before entering.');
     if (oldDepth < 40 && s.depth >= 40) note(s,'The Mirror Halls are charted. Human and Dwarf Wardens may now apply to the Guild, bringing shields for the entire party. Existing applicants stay available.');
     if (oldDepth < 50 && s.depth >= 50) note(s,'The Rootways hold undiscovered paths. A Cartography desk can now send the party to survey conquered rooms for an equipment blueprint.');
+    if (oldDepth < 60 && s.depth >= 60) note(s,'The Ember Archive yields a protective prayer. Future Clerics may bring Aegis mending: weaker healing that turns unused healing into shield. Existing applicants keep their techniques.');
     if (Math.floor(oldDepth / 10) < Math.floor(s.depth / 10)) note(s,`Word of your Guild spreads. New applicants now arrive at level ${Math.min(MAX_LEVEL,1+Math.floor(s.depth/10))}. Existing applicants stay available.`);
     for (const u of e.units) {
       const a = s.roster.find(a => a.id === u.id); a.xp = Math.min(1e12,a.xp + 8 + e.depth * 2);
@@ -275,13 +280,12 @@ export function tick(s) {
       const ability = abilityFor(u), powers=combatPowers(u), power=powers.ability; u.abilityCooldown = powers.cooldown;
       if (ability.effect === 'shield') {
         const targets=ability.target==='party'?e.units.filter(x=>x.hp>0):[u];let granted=0;
-        for(const target of targets){const before=target.shield;target.shield=Math.min(Math.round(target.maxHp*.6),target.shield+Math.round(power*ability.scale));granted+=target.shield-before;}
-        if(u.warded!==null)u.warded+=granted;
+        for(const target of targets)granted+=grantShield(u,target,power*ability.scale);
         battleNote(e,`${a.name}: ${ability.name} grants ${granted} shield${ability.target==='party'?` across ${targets.length} living party members`:''}.`);
       }
       if (ability.effect === 'heal') {
         const target = e.units.filter(x => x.hp > 0).sort((a,b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-        if (target) { const healing = Math.min(target.maxHp - target.hp, Math.round(power * ability.scale)); target.hp += healing; u.healing += healing; let cleansed=''; if (u.cleanse && target.status.length) { cleansed=target.status.shift().type; u.cleansed++; } if(healing>0||cleansed) battleNote(e,`${a.name}: ${ability.name} heals ${s.roster.find(a=>a.id===target.id).name} for ${healing}${cleansed?` and cleanses ${cleansed}`:''}.`); }
+        if (target) { const amount=Math.round(power*ability.scale),healing = Math.min(target.maxHp - target.hp, amount); target.hp += healing; u.healing += healing; const warded=ability.overflowWard?(ability.overflowTarget==='party'?e.units.filter(x=>x.hp>0):[target]).reduce((sum,recipient)=>sum+grantShield(u,recipient,(amount-healing)*ability.overflowWard),0):0; let cleansed=''; if (u.cleanse && target.status.length) { cleansed=target.status.shift().type; u.cleansed++; } if(healing>0||cleansed||warded) battleNote(e,`${a.name}: ${ability.name} heals ${s.roster.find(a=>a.id===target.id).name} for ${healing}${warded?` and grants ${warded} shield`:''}${cleansed?` and cleanses ${cleansed}`:''}.`); }
       }
       if (ability.effect === 'bleed') { directHit(e,u,power*ability.directScale); e.enemy.status.push({ type: 'bleed', source: u.id, power: Math.round(power * ability.scale), remaining: 4 }); battleNote(e,`${a.name}: ${ability.name} inflicts a four-second bleed.`); }
     }
@@ -342,7 +346,7 @@ function validateSave(s) {
     a.career ??= freshCareer(s.clock,false);
     const career=a.career;
     if(!career||!int(career.since)||career.since>s.clock||typeof career.complete!=='boolean'||['rooms','wins','downed','bosses','cleansed'].some(k=>!int(career[k]))||['damage','healing','blocked'].some(k=>!num(career[k]))||!int(career.bestDepth,1000000)||career.wins>career.rooms||career.downed>career.rooms||career.bosses>career.wins)fail();
-    a.technique ??= null; if(a.technique!==null && (!Object.hasOwn(TECHNIQUES,a.technique)||TECHNIQUES[a.technique].classId!==a.classId)) fail(); a.equipment ??= null; if(a.equipment!==null && !s.equipmentUnlocked.includes(a.equipment)) fail();
+    a.technique ??= null; if(a.technique!==null && (!Object.hasOwn(TECHNIQUES,a.technique)||TECHNIQUES[a.technique].classId!==a.classId||s.depth<(TECHNIQUES[a.technique].unlockDepth||0))) fail(); a.equipment ??= null; if(a.equipment!==null && !s.equipmentUnlocked.includes(a.equipment)) fail();
     if (!a || !int(a.id) || a.id < 1 || ids.has(a.id) || a.id >= s.nextId || typeof a.name !== 'string' || a.name.length > 40 || !Object.hasOwn(CLASSES,a.classId) || s.depth<(CLASSES[a.classId].unlockDepth||0) || !Object.hasOwn(ORIGINS,a.origin) || !ORIGINS[a.origin].classes.includes(a.classId) || !num(a.talent,1.05) || a.talent < .95 || !int(a.level,MAX_LEVEL) || a.level < 1 || !int(a.xp)) fail(); ids.add(a.id);
   }
   if (!Array.isArray(s.party) || s.party.length > partySlots(s) || new Set(s.party).size !== s.party.length || s.party.some(id => !s.roster.some(a => a.id === id))) fail();
@@ -360,7 +364,7 @@ function validateSave(s) {
     if (!r || !int(r.depth,1000000) || !num(r.reward) || !int(r.seconds,180) || typeof r.win !== 'boolean' || typeof r.reason !== 'string' || r.reason.length > 100 || !Array.isArray(r.units) || r.units.length > 4 || r.units.some(u => !u || !int(u.id) || !num(u.damage) || !num(u.healing) || typeof u.survived !== 'boolean')) fail();
     for (const u of r.units) {
       const a=s.roster.find(a=>a.id===u.id);
-      if(u.technique===undefined)u.technique="unknown"; if(u.technique!==null && u.technique!=="unknown" && (!Object.hasOwn(TECHNIQUES,u.technique)||TECHNIQUES[u.technique].classId!==u.classId)) fail(); u.blocked ??= 0; u.cleansed ??= 0; u.taken ??= null; u.name ??= a?.name || 'Former adventurer'; u.classId ??= a?.classId || null; u.level ??= null; if(u.equipment===undefined)u.equipment='unknown';
+      if(u.technique===undefined)u.technique="unknown"; if(u.technique!==null && u.technique!=="unknown" && (!Object.hasOwn(TECHNIQUES,u.technique)||TECHNIQUES[u.technique].classId!==u.classId||s.depth<(TECHNIQUES[u.technique].unlockDepth||0))) fail(); u.blocked ??= 0; u.cleansed ??= 0; u.taken ??= null; u.name ??= a?.name || 'Former adventurer'; u.classId ??= a?.classId || null; u.level ??= null; if(u.equipment===undefined)u.equipment='unknown';
       u.warded??=null;
       if (!num(u.blocked) || !int(u.cleansed) || (u.warded!==null&&!num(u.warded)) || (u.taken!==null&&!num(u.taken)) || typeof u.name!=='string' || u.name.length>40 || (u.classId!==null&&!Object.hasOwn(CLASSES,u.classId)) || (u.level!==null&&(!int(u.level,MAX_LEVEL)||u.level<1)) || (u.equipment!==null&&u.equipment!=='unknown'&&!Object.hasOwn(EQUIPMENT,u.equipment))) fail();
     }
@@ -384,7 +388,7 @@ function validateSave(s) {
     for (const u of e.units) { u.warded??=null;u.blocked ??= 0; u.cleansed ??= 0; u.cleanse ??= s.upgrades.infirmary > 0; if (!s.party.includes(u.id) || !int(u.speed,10) || u.speed < 1 || !num(u.abilityCooldown,10) || !num(u.damage) || !num(u.healing) || !num(u.blocked) || (u.warded!==null&&!num(u.warded)) || !int(u.cleansed) || typeof u.cleanse !== 'boolean') fail(); }
     e.frontId ??= e.units.find(u=>s.roster.find(a=>a.id===u.id).classId==='guardian')?.id || e.units[0].id;
     if(!s.party.includes(e.frontId)) fail();
-    for(const u of e.units){ const actor=s.roster.find(a=>a.id===u.id); if(u.technique===undefined)u.technique=actor.technique; if(u.technique!==null && (!Object.hasOwn(TECHNIQUES,u.technique)||TECHNIQUES[u.technique].classId!==actor.classId)) fail(); u.name ??= actor.name; u.classId ??= actor.classId; u.level ??= actor.level; u.taken ??= 0; if(typeof u.name!=='string'||u.name.length>40||u.classId!==actor.classId||!int(u.level,MAX_LEVEL)||u.level<1||!num(u.taken)) fail(); u.equipment ??= null; if(u.equipment!==null && !s.equipmentUnlocked.includes(u.equipment)) fail(); }
+    for(const u of e.units){ const actor=s.roster.find(a=>a.id===u.id); if(u.technique===undefined)u.technique=actor.technique; if(u.technique!==null && (!Object.hasOwn(TECHNIQUES,u.technique)||TECHNIQUES[u.technique].classId!==actor.classId||s.depth<(TECHNIQUES[u.technique].unlockDepth||0))) fail(); u.name ??= actor.name; u.classId ??= actor.classId; u.level ??= actor.level; u.taken ??= 0; if(typeof u.name!=='string'||u.name.length>40||u.classId!==actor.classId||!int(u.level,MAX_LEVEL)||u.level<1||!num(u.taken)) fail(); u.equipment ??= null; if(u.equipment!==null && !s.equipmentUnlocked.includes(u.equipment)) fail(); }
     e.enemy.blocked ??= 0; e.enemy.healing ??= 0; e.enemy.reflection??=0; e.enemy.reflected??=0; if(!num(e.enemy.blocked)||!num(e.enemy.healing)||!num(e.enemy.reflection,1)||!num(e.enemy.reflected)) fail();
     if (typeof e.enemy.name !== 'string' || e.enemy.name.length > 80 || typeof e.enemy.boss !== 'boolean' || !int(e.enemy.region,STRATA.length-1)) fail();
   }

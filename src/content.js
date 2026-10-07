@@ -45,4 +45,5 @@ export const TECHNIQUES = {
   deepbarbs: { classId:'ranger', name:'Deep barbs', cooldown:6, directScale:.65, scale:.78 },
   quiet: { classId:'cleric', name:'Quiet mending', cooldown:3, scale:1.4 },
   greater: { classId:'cleric', name:'Greater mending', cooldown:7, scale:3.8 },
+  aegis: { classId:'cleric', name:'Aegis mending', unlockDepth:60, cooldown:5, scale:2.25, overflowWard:1, overflowTarget:'party', tags:['holy','heal','ward'], description:'Heals the living ally with the lowest health percentage. Each unused point of healing grants shield to every living party member, up to 60% of each recipient\'s maximum HP. Heals 10% less than standard Mending light. No unused healing means no ward; never revives. Health ties follow party order.' },
 };
