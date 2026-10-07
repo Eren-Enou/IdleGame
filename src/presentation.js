@@ -5,7 +5,7 @@ export function combatDescription(s,a) {
   const basic=`Basic attacks: ${Math.round(powers.basic)} damage every ${t.speed}s before armor; 10% chance of a 50% stronger hit.`;
   const amount=Math.round(powers.ability*ability.scale);
   let effect;
-  if(ability.effect==='shield') effect=`Adds ${amount} shield to self, up to ${Math.round(t.hp*.6)} stored shield.`;
+  if(ability.effect==='shield') effect=ability.target==='party'?`Adds ${amount} shield to each living party member, up to 60% of each recipient's maximum HP. Does not restore health or revive.`:`Adds ${amount} shield to self, up to ${Math.round(t.hp*.6)} stored shield.`;
   if(ability.effect==='heal') effect=`Restores up to ${amount} HP to the living ally with the lowest health percentage.${s.upgrades.infirmary>0?' Cleanses one harmful status.':''}`;
   if(ability.effect==='bleed') effect=`Deals ${Math.round(powers.ability*ability.directScale)} damage before armor, then ${amount} bleed damage each second for 4 seconds; bleed ignores armor.`;
   return `${basic} ${ability.name}: every ${powers.cooldown}s. ${effect} Shields absorb incoming damage.`;
@@ -21,7 +21,7 @@ export function partyAdvice(s) {
   const classes = s.party.map(id => s.roster.find(a => a.id === id).classId);
   if (!classes.length) return 'Recruit adventurers below, assign them to a party, then enter the Delve.';
   const front = s.roster.find(a => a.id === s.party.find(id => s.roster.find(a=>a.id===id).classId === 'guardian')) || s.roster.find(a => a.id === s.party[0]);
-  const healing = classes.includes('cleric') ? 'A cleric can heal living allies.' : 'No healer assigned; this party depends on ending fights quickly.';
+  const healing = classes.includes('cleric') ? 'A cleric can heal living allies.' : classes.includes('warden') ? 'No healer assigned; party wards absorb damage, but lost health cannot be restored.' : 'No healer assigned; this party depends on ending fights quickly.';
   return `${front.name} will take direct enemy attacks first. ${healing} Everyone recovers after each completed room.`;
 }
 export function reportAdvice(report) {
