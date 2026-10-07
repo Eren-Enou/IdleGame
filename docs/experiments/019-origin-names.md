@@ -1,0 +1,13 @@
+# Experiment 019 — Distinguishable adventurer names
+
+The generator had five single names per species. The live Guild already had a Borin while another Borin applied, making recruitment, plans and contribution reports harder to distinguish. Expanded names through authored origin pools: ten given names and ten family names per origin, yielding 300 distinct full names. Stone Bastion names evoke crafts/stone; Wildwood names evoke woodland features; Crossroads names use familiar trade/family names.
+
+Generation consumes exactly one naming RNG draw, as before. If the rolled name is active, it scans the same origin pool deterministically for the next unused full name, consuming no additional draws. Each pool has 100 entries, exceeding the maximum 21 active roster/applicant slots. Starting batches and paid refreshes generate sequentially so earlier members of the same batch are visible to collision avoidance. Automatic refill already does so. Characters and report/plan snapshots from older saves keep their names, including existing duplicates; validation does not rename them or reject an otherwise valid save.
+
+`node tools/name-study.js` compares the immutable engine/content baseline at `4db6b41` with this change. Across 200 seeded full-capacity Guilds and 100 refreshes each, all 20,000 new active batches have unique names. All old full-capacity Guilds contain collisions: this is expected because their 18 roster slots exceed the entire 15-name pool, not a claim about early three-member parties. Non-name actor fields and RNG match after each batch. Two hundred paired fights preserve treasury, depth, records, actor progression, encounter RNG and report contributions/outcomes; both terminal saves validate. Raw aggregates: `019-name-results.json`.
+
+The fixed baseline is an experiment snapshot. Later mechanical/content changes may legitimately break its parity assertions; do not treat historical balance as an invariant for future development.
+
+144 tests pass. New checks cover origin pools/save limits, deterministic collision fallback, unique starting/paid/refill batches, and preservation of old duplicate names, reports and plans. Browser refreshed into Aerin Thornsong, Veya Thornsong and Ilyra Oakshade, while Edric/Ilyra/Borin/Nell/Brin/Mara kept their prior names. New applicants persisted after reload, their cards fit the narrow viewport, and no console errors appeared.
+
+This improves identification and origin flavor without adding mechanical traits or fabricated biography. Broader character history, unusual recruit identities and Delve discovery remain open. Next work should return to substantive Guild/discovery capabilities rather than enlarging naming pools indefinitely.

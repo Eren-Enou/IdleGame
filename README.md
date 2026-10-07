@@ -36,6 +36,7 @@ node tools/mirror-study.js
 node tools/warden-study.js
 node tools/warden-recruit-study.js
 node tools/warden-recovery-study.js 20
+node tools/name-study.js
 ```
 
 The engine has no browser dependencies. Seeded generation, one-second combat, and offline resolution use the same code. Content lives in `src/content.js`; development findings and continuation priorities live in `docs/`.
@@ -61,3 +62,5 @@ Chart depth 40 to attract Human and Dwarf Wardens. Sheltering ward shields each 
 Applicant cards preview training after hiring once the Mentorship hall is available. Quotes reserve the hire price and, if needed, the hall's price before calculating the affordable training target. They show the total Gold cost; recruiting, building the hall and training remain separate choices.
 
 Set a Destination depth and press Set destination to stop further frontier pushes once it is conquered. Use 0 for unlimited pushing. Current combat finishes, farming remains available, and recovery can still farm/retry before arrival. Queued recovery locks destination changes until canceled. The destination works offline too.
+
+New applicants use full names from their origin's naming pool and avoid names already held by active Guild members or applicants. Existing names, saved lineups and historical reports stay preserved.

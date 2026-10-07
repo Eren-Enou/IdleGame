@@ -31,6 +31,11 @@ export const EQUIPMENT = {
   steel: { name: "Soldier's seal", cost: 120, cooldown: 2, description: 'Basic physical attacks gain 35% damage. Abilities take 2 extra seconds to recharge.', modifiers: [{ trigger: 'attack', tags: ['physical'], factor: 1.35 }] },
   ritual: { name: 'Ritual focus', cost: 120, cooldown: 0, description: 'Ward, healing and bleed abilities gain 35% strength. Basic attacks deal 20% less damage.', modifiers: [{ trigger: 'ability', tags: ['ward','heal','bleed'], factor: 1.35 }, { trigger: 'attack', tags: ['physical'], factor: .8 }] },
 };
+export const NAME_POOLS = {
+  bastion: { given:['Brin','Orra','Thorek','Dagna','Borin','Hessa','Varric','Kelda','Odren','Runa'], family:['Stonehand','Deepforge','Bronzebrook','Flintward','Ironroot','Hammerfell','Slatekeeper','Cinderpick','Mossdelver','Anvilmark'] },
+  wildwood: { given:['Ilyra','Thalen','Syl','Aerin','Veya','Lethra','Orien','Neris','Faelin','Sera'], family:['Ashbough','Willowmere','Fernwind','Mossveil','Reedwalker','Dewleaf','Silverbranch','Thornsong','Oakshade','Starling'] },
+  crossroads: { given:['Mara','Edric','Nell','Rowan','Tamsin','Lena','Corin','Ada','Harlan','Bess'], family:['Vale','Thorne','Reeve','Mercer','Hale','Farrow','Brook','Rook','Ash','Turner'] },
+};
 export const TECHNIQUES = {
   watchful: { classId:'guardian', name:'Watchful bulwark', cooldown:4, scale:1.15 },
   steadfast: { classId:'guardian', name:'Steadfast bulwark', cooldown:8, scale:2.8 },

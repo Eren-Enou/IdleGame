@@ -1,0 +1,9 @@
+{
+  "experiment": "origin-names-and-mechanical-parity",
+  "baseline": "4db6b41",
+  "seeds": 200,
+  "comparedBatches": 20000,
+  "oldCollisionBatches": 20000,
+  "newCollisionBatches": 0,
+  "pairedFights": 200
+}

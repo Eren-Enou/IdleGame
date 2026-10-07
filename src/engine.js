@@ -1,17 +1,22 @@
-import { CLASSES, ORIGINS, UPGRADES, STRATA, GATEKEEPERS, EQUIPMENT, TECHNIQUES } from './content.js';
+import { CLASSES, ORIGINS, NAME_POOLS, UPGRADES, STRATA, GATEKEEPERS, EQUIPMENT, TECHNIQUES } from './content.js';
 export const VERSION = 1;
 export const MAX_OFFLINE = 4 * 60 * 60;
 export const MAX_LEVEL = 1000000;
 export function random(s) { s.rng = (Math.imul(s.rng, 1664525) + 1013904223) >>> 0; return s.rng / 4294967296; }
 const pick = (s, a) => a[Math.floor(random(s) * a.length)];
-const names = { Dwarf: ['Brin', 'Orra', 'Thorek', 'Dagna', 'Borin'], Elf: ['Ilyra', 'Thalen', 'Syl', 'Aerin', 'Veya'], Human: ['Mara', 'Edric', 'Nell', 'Rowan', 'Tamsin'] };
+const names = Object.fromEntries(Object.entries(NAME_POOLS).map(([origin,pool])=>[origin,pool.given.flatMap(given=>pool.family.map(family=>`${given} ${family}`))]));
+function adventurerName(s,origin){
+  const pool=names[origin],start=Math.floor(random(s)*pool.length),used=new Set([...s.roster,...s.applicants].map(a=>a.name));
+  for(let offset=0;offset<pool.length;offset++){const name=pool[(start+offset)%pool.length];if(!used.has(name))return name;}
+  throw new Error('Adventurer name pool exhausted.');
+}
 function freshCareer(since,complete=true) { return {since,complete,rooms:0,wins:0,downed:0,bosses:0,bestDepth:0,damage:0,healing:0,blocked:0,cleansed:0}; }
 export function generate(s, forcedClass) {
   if (forcedClass && !Object.hasOwn(CLASSES,forcedClass)) throw new Error('Unknown adventurer class.');
   if(forcedClass&&s.depth<(CLASSES[forcedClass].unlockDepth||0))throw new Error('Adventurer class is not yet available.');
   const origin = pick(s, Object.keys(ORIGINS).filter(k => !forcedClass || ORIGINS[k].classes.includes(forcedClass)));
   const o = ORIGINS[origin], classId = forcedClass || pick(s, o.classes.filter(c=>s.depth>=(CLASSES[c].unlockDepth||0)));
-  const a={ id: s.nextId++, name: pick(s, names[o.species]), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(MAX_LEVEL,1 + Math.floor(s.depth / 10)), xp: 0, equipment: null, technique:null, career:freshCareer(s.clock) };
+  const a={ id: s.nextId++, name: adventurerName(s,origin), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(MAX_LEVEL,1 + Math.floor(s.depth / 10)), xp: 0, equipment: null, technique:null, career:freshCareer(s.clock) };
   if(s.depth>=10) a.technique=pick(s,[null,null,...Object.keys(TECHNIQUES).filter(key=>TECHNIQUES[key].classId===classId)]);
   abilityFor(a);
   return a;
@@ -34,7 +39,7 @@ export const recruitmentCost = (s, a) => s.roster.length === 0 && s.gold < hireC
 export const xpNeeded = a => 20 + (a.level - 1) * 12;
 export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
   const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], partyPlans:[null,null,null], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, pushLimit:0, auto: false, recovery:{enabled:false,rooms:10,percent:80,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
-  s.applicants = ['guardian', 'ranger', 'cleric'].map(c => generate(s, c));
+  for(const c of ['guardian','ranger','cleric'])s.applicants.push(generate(s,c));
   note(s, 'Your charter is signed. Recruit three adventurers and open the Delve.');
   return s;
 }
@@ -69,7 +74,7 @@ export function buyUpgrade(s, key) {
 }
 export function refreshApplicants(s) {
   if (s.gold < 10) return false;
-  s.gold -= 10; s.applicants = Array.from({ length: 3 }, () => generate(s)); s.applicantTimer = 0; return true;
+  s.gold -= 10; s.applicants=[];while(s.applicants.length<3)s.applicants.push(generate(s));s.applicantTimer = 0; return true;
 }
 export function unlockEquipment(s, key) {
   if(!Object.hasOwn(EQUIPMENT,key) || s.depth<10 || s.equipmentUnlocked.includes(key) || s.gold<EQUIPMENT[key].cost) return false;
