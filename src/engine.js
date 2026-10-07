@@ -33,7 +33,7 @@ export const hireCost = a => 25 + (a.level - 1) * 10;
 export const recruitmentCost = (s, a) => s.roster.length === 0 && s.gold < hireCost(a) ? 0 : hireCost(a);
 export const xpNeeded = a => 20 + (a.level - 1) * 12;
 export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
-  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], partyPlans:[null,null,null], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, auto: false, recovery:{enabled:false,rooms:10,percent:80,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
+  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], partyPlans:[null,null,null], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, pushLimit:0, auto: false, recovery:{enabled:false,rooms:10,percent:80,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
   s.applicants = ['guardian', 'ranger', 'cleric'].map(c => generate(s, c));
   note(s, 'Your charter is signed. Recruit three adventurers and open the Delve.');
   return s;
@@ -160,7 +160,9 @@ export function makeEnemy(depth) {
   return { name: boss ? GATEKEEPERS[region].name : stratum(depth).enemies[(depth - 1) % 3], hp, maxHp: hp, attack: Math.round((5 + depth * 1.5) * (boss ? 1.35 : 1)), armor: boss ? 3 : 0, cooldown: 2, status: [], shield: boss ? Math.round(hp * .15) : 0, boss, region, blocked: 0, healing: 0, reflection:STRATA[region].reflection||0, reflected:0 };
 }
 export function startExpedition(s) {
-  if (s.expedition || !s.party.length) return false;
+  if (s.expedition) return false;
+  if(s.policy==='push'&&pushDestinationReached(s)){if(s.auto){setAuto(s,false);note(s,`Destination depth ${s.pushLimit} is already conquered. Automatic pushing stopped.`);}return false;}
+  if(!s.party.length)return false;
   const depth = s.policy === 'farm' ? Math.min(s.farmDepth, Math.max(1, s.depth)) : s.depth + 1;
   const seed = (random(s) * 4294967296) >>> 0;
   s.expedition = { depth, elapsed: 0, seed, rng: seed, events: [], enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, name: a.name, classId: a.classId, level: a.level, technique:a.technique, taken: 0, ...t, equipment: a.equipment, maxHp: t.hp, shield: 0, warded:0, cooldown: 1, abilityCooldown: abilityCooldown(a), status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
@@ -168,8 +170,10 @@ export function startExpedition(s) {
   return true;
 }
 function clearRecovery(s){s.recovery.remaining=0;s.recovery.depth=0;}
-export function setPolicy(s,policy){if(!['push','farm'].includes(policy))return false;s.policy=policy;clearRecovery(s);return true;}
-export function setAuto(s,auto){if(typeof auto!=='boolean')return false;s.auto=auto;if(!auto)clearRecovery(s);return true;}
+export const pushDestinationReached=s=>s.pushLimit>0&&s.depth>=s.pushLimit;
+export function setPushLimit(s,limit){if(!Number.isInteger(limit)||limit<0||limit>1000000||s.recovery.remaining>0)return false;s.pushLimit=limit;if(s.policy==='push'&&pushDestinationReached(s))setAuto(s,false);return true;}
+export function setPolicy(s,policy){if(!['push','farm'].includes(policy))return false;s.policy=policy;clearRecovery(s);if(policy==='push'&&pushDestinationReached(s))setAuto(s,false);return true;}
+export function setAuto(s,auto){if(typeof auto!=='boolean'||(auto&&s.policy==='push'&&pushDestinationReached(s)))return false;s.auto=auto;if(!auto)clearRecovery(s);return true;}
 export function recoveryTarget(s,percent=s.recovery.percent){
   let depth=Math.max(1,Math.floor(s.depth*percent/100));if(depth%5===0)depth--;
   return depth;
@@ -231,6 +235,7 @@ function endRoom(s, win) {
   s.reports.unshift(s.lastReport); s.reports.length=Math.min(s.reports.length,8);
   note(s, `${reason} at depth ${e.depth}. ${win ? `+${reward} gold. Party recovered.` : 'Everyone returned safely. Try training, a healer, or a shallower farm.'}`);
   s.expedition = null;
+  if(s.policy==='push'&&pushDestinationReached(s)){setAuto(s,false);note(s,`Destination depth ${s.pushLimit} reached. Automatic pushing stopped; the Guild awaits new orders.`);return;}
   if(s.recovery.remaining>0){
     if(!win){setAuto(s,false);note(s,'Recovery farming failed. Automatic orders stopped; choose a shallower farm or adjust the party.');}
     else if(--s.recovery.remaining===0){s.policy='push';s.recovery.depth=0;note(s,'Recovery farming complete. Retrying the frontier.');}
@@ -302,7 +307,9 @@ function validateSave(s) {
   const num = (n, max = 1e12) => Number.isFinite(n) && n >= 0 && n <= max;
   const int = (n, max = 1e12) => num(n,max) && Number.isInteger(n);
   const events = list => Array.isArray(list) && list.length <= 12 && list.every(l => l && int(l.time,180) && typeof l.message === 'string' && l.message.length <= 300);
+  if(s&&s.pushLimit===undefined)s.pushLimit=0;
   if (!s || s.version !== VERSION || !int(s.rng,4294967295) || !int(s.nextId) || !num(s.gold) || !int(s.depth,1000000) || !num(s.savedAt,1e15) || !int(s.clock) || !int(s.applicantTimer,119) || typeof s.auto !== 'boolean' || !['push','farm'].includes(s.policy) || !int(s.farmDepth,1000000) || s.farmDepth < 1) fail();
+  if(!int(s.pushLimit,1000000))fail();
   if(!s.upgrades) fail(); s.upgrades.mentorship ??= 0;
   s.recovery ??= {enabled:false,rooms:10,percent:80,remaining:0,depth:0};
   const recovery=s.recovery;

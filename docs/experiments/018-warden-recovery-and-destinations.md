@@ -1,0 +1,19 @@
+# Experiment 018 — Warden recovery and bounded expedition orders
+
+`node tools/warden-recovery-study.js 20` creates 840 scenarios from 20 seeded Guilds after one or four hours of the existing mixed-investment journey. Cases retain the original party, replace Guardian/Cleric with a fresh or mentored+ritual Warden, or add that Warden in the fourth slot. Each uses actual hiring, facility, equipment, mentorship and order APIs. Recovery uses ten victories at 60/80/95% frontier. Then no further investment occurs during four hours of unattended resolution.
+
+Every scenario runs both 14,400 one-second live ticks and the actual four-hour offline restore path, comparing the entire terminal state. Each resulting save is round-tripped again. Full aggregates: `018-warden-recovery-results.csv`. Prepared cases buy party-wide ritual equipment; their gains are not solely a recruit effect. Reference parties remain the original three-member opening lineup.
+
+All 840 scenarios kept orders active; none failed recovery farming. Replacement parties advance more slowly than keeping veterans or filling an empty slot, but farming XP keeps them moving. In the sampled four-hour-old cohort at 80% recovery, original parties gain 166.9 depths; fresh Warden replacements gain 145.7 (Guardian) or 140.0 (Cleric); prepared replacements gain 164.4 or 153.9; a fresh fourth Warden gains 199.2 and prepared fourth 209.3. This reinforces the replacement/fourth-slot distinction from experiment 017.
+
+Deeper recovery generally reduces failed pushes; shallower recovery resolves more victories. Four-hour-old fresh Cleric replacements average 37.3 failed pushes at 60%, 29.4 at 80% and 24.8 at 95%, while depth gains are 135.7/140.0/142.6. Retain all three preferences and the 80% default. The sample does not establish safety for every party, and failed farming must still stop automation. No extra purchases are automated; no class or recovery balance changed.
+
+## Destination depth
+
+The constitution names desired maximum depth as an expedition policy. Added an optional destination so players can return to an achieved milestone and make their next Guild/preparation decision. Default 0 preserves unlimited pushing. Conquering the destination pays rewards, records the room and unlocks milestones normally, then stops automatic pushing. Farming is unaffected. Raising or clearing the destination permits further pushes but does not automatically enable repeats. Existing combat finishes when the player changes a destination; an in-flight room can therefore finish beyond a newly lowered target. Recovery before arrival retains its existing farm/retry behavior, and queued plans lock destination editing.
+
+An explicit Set destination button commits the number. Initial blur-only handling failed browser persistence; the button makes committing clear and draft values survive idle renders. Drafts are not saved as orders, and import/recovery locking discards uncommitted drafts. Old saves migrate to 0; malformed destinations reject. Exact live/offline stopping and stale saved active orders are covered by tests.
+
+139 tests pass. New destination checks cover exact stopping, reward/unlock preservation, manual pushes, farming repeats, in-flight editing, offline parity, recovery locks, legacy saves and malformed values. Browser verification commits depth 50 and reloads its active encounter with the destination intact. Victory pays 292 Gold and stops at frontier 50, with no next encounter. Reload preserves stopped orders, farming remains selectable, and the idle scene labels the conquered destination. No console errors.
+
+Next: broader Guild/discovery progression and character identity. Recovery is mechanically robust in this cohort, while repeating regions and sparse identities remain limitations. Avoid more recovery knobs without new evidence; preserve useful composition tradeoffs and milestone preparation breaks.

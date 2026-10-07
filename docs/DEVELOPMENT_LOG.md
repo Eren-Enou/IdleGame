@@ -139,3 +139,11 @@ Experiment 017 resolves 3,664 eligible Warden/reference replacement or fourth-sl
 Added applicant preparation quotes once the Mentorship hall can unlock. Shared mentorship math reserves hire and unopened-hall costs before calculating an affordable training target. Quote is pure and exposes total cost, mentor limit, insufficient Gold and full-roster cases. Hire, hall and training remain separate choices. No class/price changes. All 131 tests pass, including varied-budget comparisons with actual purchase sequences.
 
 Browser previewed 65 Gold hire + 570 Gold training to level 20 for Mara. Separate actions reduced the treasury from 2,660 to 2,025 exactly, with reload persistence and no console errors. Next: evaluate actual Warden recovery safety and longer unattended outcomes, then continue meaningful Guild/discovery development.
+
+## 2026-10-06 — Stop expedition pushes at a chosen destination
+
+Experiment 018 resolves 840 four-hour unattended scenarios from one-/four-hour-old Guilds, with originals and fresh/prepared Warden replacements or fourth members at three recovery depths. Actual live ticks and offline restore match complete state in every case; all orders remain active and no recovery farm fails. Preserved recovery choices/default and class balance. This does not establish safety for every possible party.
+
+Added optional destination depth, a policy named in the constitution. Zero preserves unlimited pushing. Reaching a destination pays rewards and milestones, then stops further pushes; manual farming stays available. Current combat finishes if a destination changes, and queued recovery locks edits. Eight new tests cover exact stopping, manual/farm behavior, in-flight edits, offline parity, recovery locks and migration/validation. All 139 tests pass.
+
+Browser caught unreliable blur-only commits; an explicit Set destination button now commits stable drafts. The established Guild reached depth 50, received 292 Gold and stopped with no next encounter. Reload preserves destination 50 and stopped orders; farming remains available. The idle scene identifies the conquered destination. No console errors. Next: broader Guild/discovery capabilities and character identity, with existing recovery policies retained until evidence supports further changes.

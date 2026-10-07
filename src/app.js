@@ -4,7 +4,7 @@ import { compareRecruit, partyAdvice, reportAdvice, combatDescription } from './
 const $ = id => document.getElementById(id);
 const key = 'idle-fodder-v1';
 const esc = x => String(x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let state, away, storageAvailable = true, stored, paused = false;
+let state, away, storageAvailable = true, stored, paused = false, destinationDraft=false;
 try { stored = localStorage.getItem(key); } catch { storageAvailable = false; }
 try { if (stored) ({ state, away } = E.restore(stored)); else state = E.createGame(); }
 catch { state = E.createGame(); storageAvailable = false; $('notice').textContent = 'The existing save could not be read. It has been preserved. Export this new session before closing, or import a valid backup.'; }
@@ -74,7 +74,7 @@ function partyPlans(){
   }).join('');
 }
 function render() {
-  const s = state, e = s.expedition, targetDepth = e?.depth || (s.policy==='farm'?Math.min(s.farmDepth,Math.max(1,s.depth)):s.depth+1), region = e ? STRATA[e.enemy.region] : E.stratum(targetDepth);
+  const s = state, e = s.expedition, destinationDone=!e&&s.policy==='push'&&E.pushDestinationReached(s), targetDepth = e?.depth || (s.policy==='farm'?Math.min(s.farmDepth,Math.max(1,s.depth)):destinationDone?s.pushLimit:s.depth+1), region = e ? STRATA[e.enemy.region] : E.stratum(targetDepth);
   $('gold').textContent = Math.floor(s.gold).toLocaleString();
   $('recovery-controls').hidden=s.depth<5;
   $('recover').checked=s.recovery.enabled;
@@ -84,17 +84,21 @@ function render() {
   $('recovery-percent').disabled=!s.recovery.enabled||s.recovery.remaining>0;
   $('recovery-help').textContent=`When automatically pushing, a defeat sends the party to farm at ${s.recovery.percent}% of your deepest depth, avoiding Gatekeepers (currently depth ${E.recoveryTarget(s)}), then retry. A failed recovery farm stops automatic orders.`;
   $('auto-help').textContent=s.recovery.enabled?'Uses recovery orders after a frontier defeat.':'Stops on defeat.';
+  $('push-limit').disabled=s.recovery.remaining>0;
+  if(s.recovery.remaining>0)destinationDraft=false; if(!destinationDraft)$('push-limit').value=s.pushLimit; $('set-destination').disabled=s.recovery.remaining>0;
+  $('destination-help').textContent=E.pushDestinationReached(s)?`Destination depth ${s.pushLimit} is conquered. Raise it or choose 0 to push farther. Farming remains available.${e?' The current room finishes.':''}`:s.pushLimit?`Push to depth ${s.pushLimit}, then stop. Recovery orders still work before arrival. The current room finishes; farming remains available.`:'0 keeps pushing. A destination stops further pushes once conquered; the current room finishes. Farming remains available.';
+  $('auto').disabled=s.policy==='push'&&E.pushDestinationReached(s);
   html('recovery-status',s.recovery.remaining?`Recovering at depth ${s.recovery.depth} · ${s.recovery.remaining} victories until frontier retry.`:'');
   html('overview', `<div class="metric"><strong>${s.depth}</strong><span>DEEPEST DELVE<br>${s.depth?'Frontier established':'The unknown awaits'}</span></div><div class="metric"><strong>${s.roster.length}/${E.capacity(s)}</strong><span>ADVENTURERS<br>${s.party.length} assigned to party</span></div><div class="metric"><strong>${s.records.wins}</strong><span>ROOMS CLEARED<br>${s.records.gold.toLocaleString()} gold recovered</span></div>`);
   $('activity').textContent = e ? `In combat · ${e.elapsed}s` : s.auto ? 'Orders active' : 'Awaiting orders';
   $('depth-mark').textContent = `DEPTH ${String(targetDepth).padStart(3,'0')}`;
   $('enemy-symbol').textContent = e?.enemy.boss ? '♛' : '♜';
-  html('enemy', e ? `<strong>${esc(e.enemy.name)}</strong>${bar(e.enemy.hp,e.enemy.maxHp,'enemy-bar')}<small>${e.enemy.hp}/${e.enemy.maxHp} HP${e.enemy.shield?` · ${e.enemy.shield} shield`:''}${e.enemy.status.length?' · bleeding':''}</small>` : '<span>A passage into the unknown.</span>');
-  const threat = targetDepth % 5 === 0 ? `<strong>Gatekeeper ahead:</strong> ${GATEKEEPERS[e?.enemy.region ?? E.regionIndex(targetDepth)].description}` : '';
+  html('enemy', e ? `<strong>${esc(e.enemy.name)}</strong>${bar(e.enemy.hp,e.enemy.maxHp,'enemy-bar')}<small>${e.enemy.hp}/${e.enemy.maxHp} HP${e.enemy.shield?` · ${e.enemy.shield} shield`:''}${e.enemy.status.length?' · bleeding':''}</small>` : destinationDone ? '<span>Destination conquered. The Guild awaits new orders.</span>' : '<span>A passage into the unknown.</span>');
+  const threat = !destinationDone && targetDepth % 5 === 0 ? `<strong>Gatekeeper ahead:</strong> ${GATEKEEPERS[e?.enemy.region ?? E.regionIndex(targetDepth)].description}` : '';
   html('region', `<h3>${region.name}</h3><p>${region.subtitle}<br>${region.hazard} ${threat}</p>`);
   $('policy').value = s.policy; $('farm-depth').max = Math.max(1,s.depth); $('farm-depth').disabled = s.policy !== 'farm'||s.recovery.remaining>0; $('auto').checked = s.auto;
   if(s.recovery.remaining>0)$('farm-depth').value=s.recovery.depth;
-  $('start').disabled = !!e || !s.party.length; $('retreat').disabled = !e;
+  $('start').disabled = !!e || !s.party.length || (s.policy==='push'&&E.pushDestinationReached(s)); $('retreat').disabled = !e;
   html('battle-party', e ? e.units.map(u => { const a = s.roster.find(a=>a.id===u.id); return `<div class="battle-unit"><strong>${esc(a.name)}</strong> · ${CLASSES[a.classId].name}${bar(u.hp,u.maxHp)}<small>${u.hp}/${u.maxHp} HP · ${u.shield} shield · ${u.warded===null?'shield granted not recorded':`${u.warded} shield granted`} · ${u.damage} damage · ${u.healing} healing${u.status.length?` · ${u.status.map(x=>x.type).join(", ")}`:""}${u.hp<=0?' · downed':''}</small></div>`; }).join('') : `<p>${esc(partyAdvice(s))}</p><div class="lineup">${s.party.map((id,i)=>{ const a=s.roster.find(a=>a.id===id); return `<div><span>${i+1}. ${esc(a.name)} · ${CLASSES[a.classId].name}</span><button data-action="earlier" data-id="${id}" aria-label="Move ${esc(a.name)} earlier" ${i===0?'disabled':''}>↑</button><button data-action="later" data-id="${id}" aria-label="Move ${esc(a.name)} later" ${i===s.party.length-1?'disabled':''}>↓</button></div>`; }).join('')}</div>`);
   $('party-count').textContent = `${s.party.length}/${E.partySlots(s)} party slots`;
   $('party-plans').hidden=s.depth<5;
@@ -136,6 +140,8 @@ $('start').onclick = () => { state.farmDepth = Math.max(1,Math.min(Math.max(1,st
 $('retreat').onclick = () => { E.retreat(state); save(); render(); };
 $('refresh').onclick = () => { E.refreshApplicants(state); save(); render(); };
 $('policy').onchange = event => { E.setPolicy(state,event.target.value); save(); render(); };
+$('push-limit').oninput=()=>{destinationDraft=true;};
+$('set-destination').onclick=()=>{const raw=$('push-limit').value,limit=Number(raw);if(raw!==''&&E.setPushLimit(state,limit)){destinationDraft=false;save();render();message('');}else message('Choose a whole destination depth from 0 to 1,000,000. Recovery locks this setting until the queue is canceled.');};
 $('farm-depth').oninput = event => { const n = Number(event.target.value); if (Number.isInteger(n) && n >= 1 && n <= Math.max(1,state.depth)) { state.farmDepth = n; save(); } };
 $('farm-depth').onchange = event => { state.farmDepth = Math.max(1,Math.min(Math.max(1,state.depth), Math.floor(Number(event.target.value)||1))); $('farm-depth').value = state.farmDepth; save(); render(); };
 $('auto').onchange = event => { E.setAuto(state,event.target.checked); save(); render(); };
@@ -147,7 +153,7 @@ $('import').onchange = async event => {
     const result = E.restore(await file.text());
     if (paused) throw new Error('This tab was paused because another tab updated the Guild. Reload before importing.');
     if (!confirm('Replace your current guild with this imported save? Export a backup first if you want to keep both.')) return;
-    state = result.state; $('farm-depth').value = state.farmDepth; storageAvailable = true; save(); message('Save imported successfully.'); render();
+    state = result.state; destinationDraft=false; $('farm-depth').value = state.farmDepth; storageAvailable = true; save(); message('Save imported successfully.'); render();
   } catch (error) { message(`Import failed: ${error.message}`); }
   finally { event.target.value=''; }
 };
