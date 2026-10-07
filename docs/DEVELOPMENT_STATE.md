@@ -1,6 +1,6 @@
 # Development state
 
-Goal remains active. Continue meaningful development under DESIGN_CONSTITUTION.md and the autonomous directive. A tested playable milestone is not completion. Historical results and decisions live in DEVELOPMENT_LOG.md and experiments 001–019; this file describes the current game and next work.
+Goal remains active. Continue meaningful development under DESIGN_CONSTITUTION.md and the autonomous directive. A tested playable milestone is not completion. Historical results and decisions live in DEVELOPMENT_LOG.md and experiments 001–021; this file describes the current game and next work.
 
 ## Running and verification
 
@@ -21,6 +21,8 @@ Node >=20.11. `npm start` serves http://127.0.0.1:5173 without dependencies or a
 
 ## Latest evidence
 
+Experiment 021 now answers the immediate discovery price/technique questions:840 funded policy continuations and 21,600 paired Ranger fights preserve the current costs/stats. In this actively invested first-depth 50 cohort, Dawn Ranger improves mean hour frontier (292.40 versus facilities270.62/free ritual275.02); prepared fourth Cleric is a cheaper competitive option. Dawn loses some Quick/Deep technique matchups. Cartography now exposes 1,200 commission/1,950 total before purchase. Next: distinct recruit identity or Delve preparation interactions beyond one discovery and repeated regions; avoid additional arbitrary economy matrices or mechanically similar seals without new evidence. Existing Guild remains frontier/destination50, farm49, auto off, Ilyra Dawn, other assigned members ritual.
+
 Experiment 014 validates 60 continuous day-long journeys, repeated identically: four-member parties cap Training/Infirmary after about 16–17h, but repeat all three original regions eleven times by 1h. This prioritized mechanical discovery before increased numeric caps.
 
 Experiment 015 validates 37,440 Mirror encounters plus 120 one-/four-hour journey saves. Reflection and back-line targeting create composition/equipment/technique tradeoffs; entry rooms remain accessible at sampled levels. Historical three-region studies retain their recorded context.
@@ -37,7 +39,7 @@ Browser verified natural Warden generation after depth 40, recruiting level 5, a
 4. Origin full names now distinguish newly generated active characters; existing names are preserved. Character identity/history can grow. There are no simultaneous multi-party expeditions or branching exploration. One Rootways survey discovery now exists. These are design opportunities, not a mandatory feature checklist.
 5. Human playtesting/enjoyment is unverified. Browser integration checks use manual automation; engine/studies are repeatable. Saves are browser-local with no remote sync.
 
-Latest internal review is after origin names in DEVELOPMENT_LOG.md. Preserve playable milestones and continuation context; work on the next defensible improvement without claiming the overall goal complete.
+Latest internal review of six iterations is after origin names in DEVELOPMENT_LOG.md. Preserve playable milestones and continuation context; work on the next defensible improvement without claiming the overall goal complete.
 
 Experiment 020 adds the first survey discovery and validates 14,400 equipment encounters plus sixty four-hour survey journeys. Initial weak Dawn was revised to +10% basics. Final improves two sampled Ranger win comparisons and worsens eleven support/other comparisons against usual gear; cost/value and human enjoyment remain unverified. All 157 tests pass. Browser verifies desk, discovery stop, commission, exact inspection and report/reload with no errors. Current Guild: frontier50/destination50, farm49, auto off; Ilyra Dawn, Edric/Borin/Brin ritual, three previous plans unchanged. Next priority: actual Gold opportunity cost and broader technique/near-frontier evidence before expanding rewards/routes; do not treat one rare roll as a complete exploration system.
 
