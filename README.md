@@ -34,6 +34,7 @@ node tools/recovery-depth-study.js
 node tools/veteran-study.js 20
 node tools/mirror-study.js
 node tools/warden-study.js
+node tools/warden-recruit-study.js
 ```
 
 The engine has no browser dependencies. Seeded generation, one-second combat, and offline resolution use the same code. Content lives in `src/content.js`; development findings and continuation priorities live in `docs/`.
@@ -55,3 +56,5 @@ After depth 5, save up to three named party plans from the roster. Each records 
 The fourth stratum, Mirror Halls, begins at depth 31. Direct attacks reflect 15% of effective health damage to the attacker, ignoring armor; personal shields absorb it and bleed does not reflect. The Silver Adjudicator also strikes the living member with the highest attack power every third attack. The four strata then repeat every 40 depths. Reports record actual reflected health damage; old encounters keep their recorded region.
 
 Chart depth 40 to attract Human and Dwarf Wardens. Sheltering ward shields each living party member every four seconds, with lower attack power than the starting classes. It prevents incoming damage without restoring health or cleansing. Ritual focus strengthens wards; Soldier's seal delays them. Reports distinguish shield granted by the caster from damage absorbed by each recipient. Existing applicants stay available when recruitment expands.
+
+Applicant cards preview training after hiring once the Mentorship hall is available. Quotes reserve the hire price and, if needed, the hall's price before calculating the affordable training target. They show the total Gold cost; recruiting, building the hall and training remain separate choices.

@@ -131,3 +131,11 @@ Reports now distinguish effective shield granted by the caster from shield absor
 Next: study actual unequal-level replacement and Gold choices with the new class, then evaluate longer-session recruitment/discovery. The class expands available preparations; broader progression and human enjoyment remain unproven.
 
 Browser completed the new party's depth-35 fight in 15 seconds. Brin granted 972 shield; Ilyra absorbed 203 damage through shields, while returned health damage totaled 52. Reload preserved the report and all three saved plans, including Sheltering party, with no console errors. Refreshed DEVELOPMENT_STATE.md to describe current behavior and priorities, leaving earlier findings in the experiment/log history.
+
+## 2026-10-06 — Make recruit preparation costs visible
+
+Experiment 017 resolves 3,664 eligible Warden/reference replacement or fourth-slot encounters from 90 unequal-level journey states. Fresh Wardens work as a fourth member in these cohorts, but replacing a veteran often needs equipment or mentorship. A fourth Cleric also succeeds; later trained reference replacements remain competitive. Recorded eligibility differences and party-wide ritual effects rather than treating all rates as paired class advantages.
+
+Added applicant preparation quotes once the Mentorship hall can unlock. Shared mentorship math reserves hire and unopened-hall costs before calculating an affordable training target. Quote is pure and exposes total cost, mentor limit, insufficient Gold and full-roster cases. Hire, hall and training remain separate choices. No class/price changes. All 131 tests pass, including varied-budget comparisons with actual purchase sequences.
+
+Browser previewed 65 Gold hire + 570 Gold training to level 20 for Mara. Separate actions reduced the treasury from 2,660 to 2,025 exactly, with reload persistence and no console errors. Next: evaluate actual Warden recovery safety and longer unattended outcomes, then continue meaningful Guild/discovery development.

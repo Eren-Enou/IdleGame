@@ -93,19 +93,32 @@ function mentorshipXP(a,target) {
   const levels=target-a.level;
   return levels*xpNeeded(a)+6*levels*(levels-1);
 }
-export function mentorshipQuote(s,id,mode='one') {
-  const a=s.roster.find(a=>a.id===id);
-  if(!a || !s.upgrades.mentorship || !['one','catchup'].includes(mode)) return null;
+function quoteMentorship(s,a,mode,budget){
+  if(!s.roster.length)return null;
   const veteran=s.roster.reduce((best,a)=>a.level>best.level?a:best);
   if(a.level>=veteran.level) return null;
   const price=target=>Math.max(10*(target-a.level),Math.ceil(Math.max(0,mentorshipXP(a,target)-a.xp)/4));
   let target=a.level+1;
-  if(mode==='catchup' && price(target)<=s.gold){
+  if(mode==='catchup' && price(target)<=budget){
     let low=target,high=veteran.level;
-    while(low<high){const mid=Math.ceil((low+high)/2);if(price(mid)<=s.gold)low=mid;else high=mid-1;}
+    while(low<high){const mid=Math.ceil((low+high)/2);if(price(mid)<=budget)low=mid;else high=mid-1;}
     target=low;
   }
   return {target,cost:price(target),levels:target-a.level,limit:veteran.level,mentor:veteran.name};
+}
+export function mentorshipQuote(s,id,mode='one') {
+  const a=s.roster.find(a=>a.id===id);
+  if(!a || !s.upgrades.mentorship || !['one','catchup'].includes(mode)) return null;
+  return quoteMentorship(s,a,mode,s.gold);
+}
+export function recruitmentPreparation(s,id){
+  const a=s.applicants.find(a=>a.id===id);
+  if(!a||s.depth<UPGRADES.mentorship.unlockDepth)return null;
+  const hire=recruitmentCost(s,a),hall=s.upgrades.mentorship?0:upgradeCost(s,'mentorship');
+  const q=quoteMentorship(s,a,'catchup',s.gold-hire-hall);
+  if(!q)return null;
+  const total=hire+hall+q.cost;
+  return {hire,hall,training:q.cost,total,target:q.target,limit:q.limit,mentor:q.mentor,affordable:total<=s.gold,space:s.roster.length<capacity(s)};
 }
 export function mentor(s,id,mode='one') {
   if(s.expedition) return false;

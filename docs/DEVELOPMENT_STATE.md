@@ -1,15 +1,15 @@
 # Development state
 
-Goal remains active. Continue meaningful development under DESIGN_CONSTITUTION.md and the autonomous directive. A tested playable milestone is not completion. Historical results and decisions live in DEVELOPMENT_LOG.md and experiments 001–016; this file describes the current game and next work.
+Goal remains active. Continue meaningful development under DESIGN_CONSTITUTION.md and the autonomous directive. A tested playable milestone is not completion. Historical results and decisions live in DEVELOPMENT_LOG.md and experiments 001–017; this file describes the current game and next work.
 
 ## Running and verification
 
-Node >=20.11. `npm start` serves http://127.0.0.1:5173 without dependencies or a build step. `npm test` passes 124 tests. Engine, live play and capped four-hour offline resolution share the same code. Study commands are listed in README.md. No push or deployment has occurred.
+Node >=20.11. `npm start` serves http://127.0.0.1:5173 without dependencies or a build step. `npm test` passes 131 tests. Engine, live play and capped four-hour offline resolution share the same code. Study commands are listed in README.md. No push or deployment has occurred.
 
 ## Current playable game
 
 - Starting recruitment is Guardian/Ranger/Cleric with coherent Human/Dwarf/Elf origin constraints and modest talent variation. Techniques unlock for future recruits at depth 10. Human/Dwarf Wardens enter the pool after depth 40. Existing applicants and characters retain their identities when the pool expands.
-- Recruit, compare equal-level potential, assign/reorder and freely change unlocked equipment between fights. Three saved party plans after depth 5 retain members, order and equipment; applying uses current levels. Missing members block the whole application with a named warning.
+- Recruit, compare equal-level potential, preview affordable training after hire/hall costs, assign/reorder and freely change unlocked equipment between fights. Three saved party plans after depth 5 retain members, order and equipment; applying uses current levels. Missing members block the whole application with a named warning.
 - Guardians intercept direct enemy attacks and shield themselves. Rangers use fast basics and direct/bleed abilities. Clerics heal the living member with lowest health percentage; Infirmary rank 1 enables cleanse. Wardens grant party shields every four seconds, at twice ability power, with each recipient capped at 60% maximum HP. Wardens do not intercept, restore HP, cleanse or revive.
 - Push frontier or farm conquered rooms. Victories award Gold/XP; everyone recovers after rooms and no one dies permanently. Rooms end within 180 seconds. Levels have a safety ceiling of one million, rather than the removed level-1000 plateau.
 - Rootways, Ember Archive, Hollow Sanctum and Mirror Halls cycle through ten-depth bands, repeating every 40 depths. Gatekeepers appear every five depths. Hazards include burning, siphoning and 15% reflection of effective direct health damage. Bleed avoids reflection; shields absorb it. Mirror Gatekeepers also strike the living member with highest base attack, with party-order ties. The enemy-killing hit still reflects; enemy death wins even if its attacker is downed.
@@ -30,10 +30,12 @@ Browser verified natural Warden generation after depth 40, recruiting level 5, a
 
 ## Next work and limitations
 
-1. Study real Warden replacement economics with unequal recruit/veteran levels and actual available Gold. Compare training, equipment and party substitutions; existing equal-level wins are insufficient evidence.
+1. Experiment 017 now covers unequal-level Warden replacement economics: fresh fourth members succeed in the sampled cohorts, but veteran substitutions often need preparation. Applicant cards quote hire/hall/training costs before recruitment. Keep class/price choices; do not assume a fourth Warden is uniquely optimal.
 2. Evaluate Warden recovery safety and longer-session choices using the actual order API. Keep useful sustain builds and their damage/time costs; do not flatten every specialization into an identical outcome.
 3. Further frontier milestones should create new preparation or recruitment capabilities. One new region/class does not solve repeating content or late-game Gold agency. Avoid extending numeric facility caps without addressing discovery/choice evidence.
 4. Names remain repetitive and character identity/history can grow. There are no simultaneous multi-party expeditions, branching exploration or rare discovery events. These are design opportunities, not a mandatory feature checklist.
 5. Human playtesting/enjoyment is unverified. Browser integration checks use manual automation; engine/studies are repeatable. Saves are browser-local with no remote sync.
 
 Latest internal review is after saved party plans in DEVELOPMENT_LOG.md. Preserve playable milestones and continuation context; work on the next defensible improvement without claiming the overall goal complete.
+
+Experiment 017 validates 3,664 eligible replacement/fourth-slot encounters from 90 journey snapshots. Shared pure preparation quotes reserve hire and hall costs before affordable catch-up, with full-roster and insufficient-Gold explanations. All 131 tests pass. Browser confirms a 635-Gold quote matched separate hiring/training, reaching level 20 and persisting across reload. Current Guild also retains Mara as a trained reserve; its established Sheltering party is unchanged. Next: Warden recovery safety/longer unattended outcomes and broader capability progression.
