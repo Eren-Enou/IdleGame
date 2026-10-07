@@ -1,6 +1,6 @@
 import * as E from './engine.js';
 import { CLASSES, ORIGINS, UPGRADES, STRATA, GATEKEEPERS, EQUIPMENT } from './content.js';
-import { compareRecruit, partyAdvice, reportAdvice, combatDescription } from './presentation.js';
+import { compareRecruit, partyAdvice, reportAdvice, combatDescription, enemyModifierDescription } from './presentation.js';
 const $ = id => document.getElementById(id);
 const key = 'idle-fodder-v1';
 const esc = x => String(x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -30,7 +30,7 @@ function comparison(a) {
 function timeline(events) { return `<ol class="combat-timeline">${events.map(event=>`<li><small>${event.time}s</small> ${esc(event.message)}</li>`).join('')}</ol>`; }
 function reportBody(r) {
   const enemy=r.enemy, gear=u=>u.equipment==='unknown'?'Equipment not recorded':u.equipment?EQUIPMENT[u.equipment].name:'No equipment';
-  return `${r.purpose==='survey'?`<p><strong>Rootways survey</strong>: ${r.discovery?'Dawn seal blueprint discovered. Commission it in the Guild workshop.':r.win?'No blueprint found on this survey.':'Victory is required to discover a blueprint.'}</p>`:''}<p>${esc(reportAdvice(r))}</p>${enemy?`<p class="enemy-summary">${esc(enemy.name)} ended at ${enemy.hp}/${enemy.maxHp} HP · ${enemy.blocked} damage absorbed by shields · ${enemy.healing} health recovered${enemy.reflected?` · ${enemy.reflected} reflected health damage`:''}.</p>`:''}<div class="report-row">${r.units.map(u=>`<span><strong>${esc(u.name)}</strong>${u.level?` · Lv ${u.level}`:''} · ${gear(u)}<br><small>${esc(u.technique==='unknown'||!u.classId?'Technique not recorded':E.abilityFor(u).name)}</small><br>${u.damage} damage · ${u.healing} healing · ${u.blocked} shield absorbed · ${u.warded===null?'shield granted not recorded':`${u.warded} shield granted`} · ${u.taken===null?'damage taken not recorded':`${u.taken} damage taken`} · ${u.cleansed} cleansed${u.survived?'':' · downed'}</span>`).join('')}</div>`;
+  return `${r.purpose==='survey'?`<p><strong>Rootways survey</strong>: ${r.discovery?'Dawn seal blueprint discovered. Commission it in the Guild workshop.':r.win?'No blueprint found on this survey.':'Victory is required to discover a blueprint.'}</p>`:''}<p>${esc(reportAdvice(r))}</p>${enemy?`<p class="enemy-summary">${esc(enemy.name)} ended at ${enemy.hp}/${enemy.maxHp} HP · ${enemy.blocked} damage absorbed by shields · ${enemy.healing} health recovered${enemy.reflected?` · ${enemy.reflected} reflected health damage`:''${enemy.eroded?` - ${enemy.eroded} stored party shield unravelled`:''}.</p>`:''}<div class="report-row">${r.units.map(u=>`<span><strong>${esc(u.name)}</strong>${u.level?` · Lv ${u.level}`:''} · ${gear(u)}<br><small>${esc(u.technique==='unknown'||!u.classId?'Technique not recorded':E.abilityFor(u).name)}</small><br>${u.damage} damage · ${u.healing} healing · ${u.blocked} shield absorbed · ${u.warded===null?'shield granted not recorded':`${u.warded} shield granted`} · ${u.taken===null?'damage taken not recorded':`${u.taken} damage taken`} · ${u.cleansed} cleansed${u.survived?'':' · downed'}</span>`).join('')}</div>`;
 }
 function equipmentControls(a) {
   if(state.depth<5) return '';
@@ -74,7 +74,7 @@ function partyPlans(){
   }).join('');
 }
 function render() {
-  const s = state, e = s.expedition, destinationDone=!e&&s.policy==='push'&&E.pushDestinationReached(s), targetDepth = e?.depth || (s.policy==='survey'?E.surveyDepth(s):s.policy==='farm'?Math.min(s.farmDepth,Math.max(1,s.depth)):destinationDone?s.pushLimit:s.depth+1), region = e ? STRATA[e.enemy.region] : E.stratum(targetDepth);
+  const s = state, e = s.expedition, destinationDone=!e&&s.policy==='push'&&E.pushDestinationReached(s), targetDepth = e?.depth || (s.policy==='survey'?E.surveyDepth(s):s.policy==='farm'?Math.min(s.farmDepth,Math.max(1,s.depth)):destinationDone?s.pushLimit:s.depth+1), region = e ? STRATA[e.enemy.region] : E.stratum(targetDepth), preview=e?.enemy||E.previewEnemy(s,targetDepth);
   $('gold').textContent = Math.floor(s.gold).toLocaleString();
   $('recovery-controls').hidden=s.depth<5;
   $('recover').checked=s.recovery.enabled;
@@ -95,9 +95,9 @@ function render() {
   $('activity').textContent = e ? `In combat · ${e.elapsed}s` : s.auto ? 'Orders active' : 'Awaiting orders';
   $('depth-mark').textContent = `DEPTH ${String(targetDepth).padStart(3,'0')}`;
   $('enemy-symbol').textContent = e?.enemy.boss ? '♛' : '♜';
-  html('enemy', e ? `<strong>${esc(e.enemy.name)}</strong>${bar(e.enemy.hp,e.enemy.maxHp,'enemy-bar')}<small>${e.enemy.hp}/${e.enemy.maxHp} HP${e.enemy.shield?` · ${e.enemy.shield} shield`:''}${e.enemy.status.length?' · bleeding':''}</small>` : destinationDone ? '<span>Destination conquered. The Guild awaits new orders.</span>' : s.policy==='survey'?(E.surveyComplete(s)?'<span>Blueprint found. The Guild awaits new orders.</span>':'<span>A charted passage with something left to discover.</span>'): '<span>A passage into the unknown.</span>');
+  html('enemy', e ? `<strong>${esc(e.enemy.name)}</strong>${bar(e.enemy.hp,e.enemy.maxHp,'enemy-bar')}<small>${e.enemy.hp}/${e.enemy.maxHp} HP${e.enemy.shield?` · ${e.enemy.shield} shield`:''}${e.enemy.status.length?' · bleeding':''}</small>` : destinationDone ? '<span>Destination conquered. The Guild awaits new orders.</span>' : s.policy==='survey'?(E.surveyComplete(s)?'<span>Blueprint found. The Guild awaits new orders.</span>':'<span>A charted passage with something left to discover.</span>'): preview.modifier?<strong></strong><span>Prepare for an Unravelling encounter.</span>:'<span>A passage into the unknown.</span>');
   const threat = !destinationDone && targetDepth % 5 === 0 ? `<strong>Gatekeeper ahead:</strong> ${GATEKEEPERS[e?.enemy.region ?? E.regionIndex(targetDepth)].description}` : '';
-  html('region', `<h3>${region.name}</h3><p>${region.subtitle}<br>${region.hazard} ${threat}</p>`);
+  html('region', `<h3>${region.name}</h3><p>${region.subtitle}<br>${region.hazard} ${threat}${!destinationDone&&preview.modifier?`<br><strong>Unravelling enemy:</strong> ${esc(enemyModifierDescription(preview))}`:''}</p>`);
   $('policy').value = s.policy; $('farm-depth').max = Math.max(1,s.depth); $('farm-depth').disabled = s.policy !== 'farm'||s.recovery.remaining>0; $('auto').checked = s.auto;
   if(s.recovery.remaining>0)$('farm-depth').value=s.recovery.depth;
   $('start').disabled = !!e || !s.party.length || (s.policy==='push'&&E.pushDestinationReached(s)) || (s.policy==='survey'&&E.surveyComplete(s)); $('retreat').disabled = !e;

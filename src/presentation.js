@@ -1,5 +1,6 @@
 import { stats, combatPowers, abilityFor } from './engine.js';
 import { CLASSES } from './content.js';
+export function enemyModifierDescription(enemy){return enemy.modifier==='unravelling'?`Every third enemy attack removes ${Math.round(enemy.erosion*100)}% of each living adventurer's stored shield (rounded up) before striking. Healing and faster kills can reduce reliance on stored wards.`:'';}
 export function combatDescription(s,a) {
   const t=stats(s,a), ability=abilityFor(a), powers=combatPowers({...a,...t});
   const basic=`Basic attacks: ${Math.round(powers.basic)} damage every ${t.speed}s before armor; 10% chance of a 50% stronger hit.`;
@@ -27,6 +28,7 @@ export function partyAdvice(s) {
 }
 export function reportAdvice(report) {
   if(report.win) return 'Party recovered fully. Everyone who participated earned XP.';
+  if(report.enemy?.modifier==='unravelling'&&report.enemy.eroded>0)return `This enemy unravelled ${report.enemy.eroded} stored party shield before striking. More healing or faster kills can reduce dependence on wards.${report.enemy.region===3?' Mirror reflection still returns direct damage to attackers.':''}`;
   const standing=report.units.filter(u=>u.survived).length;
   if(report.seconds>=180 && standing) return `Time ran out with ${standing} adventurer${standing===1?'':'s'} still standing. More sustained damage or fewer support slots may help.`;
   if(report.enemy?.boss && report.enemy.region===1) return 'The Librarian lashes the whole party. Guardians cannot intercept this attack; party health, healing or faster kills can help.';

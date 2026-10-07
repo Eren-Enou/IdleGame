@@ -28,6 +28,9 @@ export const GATEKEEPERS = [
   { name: 'The Hollow Prior', effect: 'bleed', scale: .12, description: 'Every third attack, wounds the front line for 4 seconds. Infirmary rank 1 lets Mending light cleanse one harmful status.' },
   { name: 'The Silver Adjudicator', effect: 'strongest', scale: .7, description: 'Every third attack, strikes the living adventurer with the highest attack power for 70% enemy attack. Guardians cannot intercept this extra strike.' },
 ];
+export const ENCOUNTER_MODIFIERS = {
+  unravelling:{name:'Unravelling',unlockDepth:70,erosion:.5,description:'Every third enemy attack unravels half of each living adventurer\'s stored shield before striking. Healing restores health directly; faster kills allow fewer pulses.'},
+};
 export const EQUIPMENT = {
   dawn: { name:'Dawn seal', cost:1200, unlockDepth:50, discovery:'dawn', openingCooldown:1, cooldown:0, description:'First ability casts after 1 second; later casts use the usual cooldown. Basic attacks gain 10% damage. Gives up the stronger sustained attacks or abilities of other equipment. Discover its blueprint by surveying the Rootways.', modifiers:[{trigger:'attack',tags:['physical'],factor:1.1}] },
   steel: { name: "Soldier's seal", cost: 120, cooldown: 2, description: 'Basic physical attacks gain 35% damage. Abilities take 2 extra seconds to recharge.', modifiers: [{ trigger: 'attack', tags: ['physical'], factor: 1.35 }] },

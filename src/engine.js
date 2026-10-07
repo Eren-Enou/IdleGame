@@ -1,4 +1,4 @@
-import { CLASSES, ORIGINS, NAME_POOLS, UPGRADES, STRATA, GATEKEEPERS, EQUIPMENT, TECHNIQUES } from './content.js';
+import { CLASSES, ORIGINS, NAME_POOLS, UPGRADES, STRATA, GATEKEEPERS, EQUIPMENT, TECHNIQUES, ENCOUNTER_MODIFIERS } from './content.js';
 export const VERSION = 1;
 export const MAX_OFFLINE = 4 * 60 * 60;
 export const MAX_LEVEL = 1000000;
@@ -40,6 +40,7 @@ export const xpNeeded = a => 20 + (a.level - 1) * 12;
 export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
   const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], partyPlans:[null,null,null], equipmentUnlocked: [], discoveries:[], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0, cartography:0 }, policy: 'push', farmDepth: 1, pushLimit:0, auto: false, recovery:{enabled:false,rooms:10,percent:80,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
   for(const c of ['guardian','ranger','cleric'])s.applicants.push(generate(s,c));
+  s.delveSeed=seed>>>0;
   note(s, 'Your charter is signed. Recruit three adventurers and open the Delve.');
   return s;
 }
@@ -163,11 +164,18 @@ export const surveyChance=units=>Math.min(.5,.2+.1*units.filter(u=>u.classId==='
 export const surveyComplete=s=>s.discoveries.includes('dawn');
 export function regionIndex(depth) { return Math.floor((depth - 1) / 10) % STRATA.length; }
 export function stratum(depth) { return STRATA[regionIndex(depth)]; }
-export function makeEnemy(depth) {
+export function encounterModifier(depth,seed){
+  if(depth<70||depth%5===0)return null;
+  let n=(seed^Math.imul(depth,0x9e3779b1))>>>0;n=Math.imul(n^(n>>>16),0x85ebca6b);n=Math.imul(n^(n>>>13),0xc2b2ae35);n=(n^(n>>>16))>>>0;
+  return n/4294967296<.2?'unravelling':null;
+}
+export const previewEnemy=(s,depth)=>makeEnemy(depth,encounterModifier(depth,s.delveSeed));
+export function makeEnemy(depth,modifier=null) {
+  if(modifier!==null&&(!Object.hasOwn(ENCOUNTER_MODIFIERS,modifier)||depth<ENCOUNTER_MODIFIERS[modifier].unlockDepth||depth%5===0))throw new Error('Invalid encounter modifier.');
   const boss = depth % 5 === 0, region = regionIndex(depth);
   const scale = (1 + depth * .18) * (1 + Math.floor(depth / 30) * .25);
   const hp = Math.round(70 * scale * (boss ? 2.3 : 1));
-  return { name: boss ? GATEKEEPERS[region].name : stratum(depth).enemies[(depth - 1) % 3], hp, maxHp: hp, attack: Math.round((5 + depth * 1.5) * (boss ? 1.35 : 1)), armor: boss ? 3 : 0, cooldown: 2, status: [], shield: boss ? Math.round(hp * .15) : 0, boss, region, blocked: 0, healing: 0, reflection:STRATA[region].reflection||0, reflected:0 };
+  return { name: `${modifier?`${ENCOUNTER_MODIFIERS[modifier].name} `:''}${boss ? GATEKEEPERS[region].name : stratum(depth).enemies[(depth - 1) % 3]}`, hp, maxHp: hp, attack: Math.round((5 + depth * 1.5) * (boss ? 1.35 : 1)), armor: boss ? 3 : 0, cooldown: 2, status: [], shield: boss ? Math.round(hp * .15) : 0, boss, region, blocked: 0, healing: 0, reflection:STRATA[region].reflection||0, reflected:0,modifier,erosion:modifier?ENCOUNTER_MODIFIERS[modifier].erosion:0,eroded:0,attackCount:0 };
 }
 export function startExpedition(s) {
   if (s.expedition) return false;
@@ -176,7 +184,7 @@ export function startExpedition(s) {
   if(!s.party.length)return false;
   const depth = s.policy==='survey'?surveyDepth(s):s.policy === 'farm' ? Math.min(s.farmDepth, Math.max(1, s.depth)) : s.depth + 1;
   const seed = (random(s) * 4294967296) >>> 0;
-  s.expedition = { depth, purpose:s.policy, elapsed: 0, seed, rng: seed, events: [], enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, name: a.name, classId: a.classId, level: a.level, technique:a.technique, taken: 0, ...t, equipment: a.equipment, maxHp: t.hp, shield: 0, warded:0, cooldown: 1, abilityCooldown: openingCooldown(a), status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
+  s.expedition = { depth, purpose:s.policy, elapsed: 0, seed, rng: seed, events: [], enemy: previewEnemy(s,depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, name: a.name, classId: a.classId, level: a.level, technique:a.technique, taken: 0, ...t, equipment: a.equipment, maxHp: t.hp, shield: 0, warded:0, cooldown: 1, abilityCooldown: openingCooldown(a), status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
   s.expedition.frontId = s.expedition.units.find(u=>u.classId==='guardian')?.id || s.party[0];
   return true;
 }
@@ -237,6 +245,7 @@ function endRoom(s, win) {
     if (oldDepth < 40 && s.depth >= 40) note(s,'The Mirror Halls are charted. Human and Dwarf Wardens may now apply to the Guild, bringing shields for the entire party. Existing applicants stay available.');
     if (oldDepth < 50 && s.depth >= 50) note(s,'The Rootways hold undiscovered paths. A Cartography desk can now send the party to survey conquered rooms for an equipment blueprint.');
     if (oldDepth < 60 && s.depth >= 60) note(s,'The Ember Archive yields a protective prayer. Future Clerics may bring Aegis mending: weaker healing that turns unused healing into shield. Existing applicants keep their techniques.');
+    if (oldDepth < 70 && s.depth >= 70) note(s,'Deeper passages unravel protective magic. Some ordinary rooms now contain Unravelling enemies that erode stored party shields. Inspect the next room before preparing your party.');
     if (Math.floor(oldDepth / 10) < Math.floor(s.depth / 10)) note(s,`Word of your Guild spreads. New applicants now arrive at level ${Math.min(MAX_LEVEL,1+Math.floor(s.depth/10))}. Existing applicants stay available.`);
     for (const u of e.units) {
       const a = s.roster.find(a => a.id === u.id); a.xp = Math.min(1e12,a.xp + 8 + e.depth * 2);
@@ -249,7 +258,7 @@ function endRoom(s, win) {
   let discovery=null;
   if(win&&e.purpose==='survey'&&!surveyComplete(s)&&random(e)<surveyChance(e.units)){discovery='dawn';s.discoveries.push(discovery);note(s,'Rootways survey discovered the Dawn seal blueprint. Commission it in the Guild workshop.');battleNote(e,'Dawn seal blueprint discovered.');}
   s.lastReport = { depth: e.depth, purpose:e.purpose, discovery, at: s.clock, seed: e.seed, events: e.events, win, reward, seconds: e.elapsed, reason, frontId: e.frontId,
-    enemy: { name: e.enemy.name, hp: e.enemy.hp, maxHp: e.enemy.maxHp, blocked: e.enemy.blocked, healing: e.enemy.healing, boss: e.enemy.boss, region: e.enemy.region, reflected:e.enemy.reflected },
+    enemy: { name: e.enemy.name, hp: e.enemy.hp, maxHp: e.enemy.maxHp, blocked: e.enemy.blocked, healing: e.enemy.healing, boss: e.enemy.boss, region: e.enemy.region, reflected:e.enemy.reflected,modifier:e.enemy.modifier,eroded:e.enemy.eroded },
     units: e.units.map(u => ({ id: u.id, name: u.name, classId: u.classId, level: u.level, technique:u.technique, equipment: u.equipment, taken: u.taken, damage: u.damage, healing: u.healing, blocked: u.blocked, warded:u.warded, cleansed: u.cleansed, survived: u.hp > 0 })) };
   s.reports.unshift(s.lastReport); s.reports.length=Math.min(s.reports.length,8);
   note(s, `${reason} at depth ${e.depth}. ${win ? `+${reward} gold. Party recovered.` : 'Everyone returned safely. Try training, a healer, or a shallower farm.'}`);
@@ -296,6 +305,11 @@ export function tick(s) {
   if (!alive.length) { endRoom(s, false); return; }
   if (--e.enemy.cooldown <= 0) {
     e.enemy.cooldown = 2;
+    e.enemy.attackCount++;
+    if(e.enemy.erosion>0&&e.enemy.attackCount%3===0){
+      let eroded=0;for(const u of alive){const lost=Math.ceil(u.shield*e.enemy.erosion);u.shield-=lost;eroded+=lost;}
+      e.enemy.eroded+=eroded;battleNote(e,`${e.enemy.name} unravels ${eroded} stored party shield.`);
+    }
     const target = alive.find(u => s.roster.find(a => a.id === u.id).classId === 'guardian') || alive[0];
     const beforeShield=target.shield, damage = hit(target, e.enemy.attack), absorbed=beforeShield-target.shield;
     battleNote(e,`${e.enemy.name} hits ${s.roster.find(a=>a.id===target.id).name} for ${damage} damage${absorbed?`, ${absorbed} absorbed by shield`:''}${target.hp<=0?' — downed':''}.`);
@@ -327,8 +341,10 @@ function validateSave(s) {
   const int = (n, max = 1e12) => num(n,max) && Number.isInteger(n);
   const events = list => Array.isArray(list) && list.length <= 12 && list.every(l => l && int(l.time,180) && typeof l.message === 'string' && l.message.length <= 300);
   if(s&&s.pushLimit===undefined)s.pushLimit=0;
+  if(s&&s.delveSeed===undefined)s.delveSeed=s.rng;
   if (!s || s.version !== VERSION || !int(s.rng,4294967295) || !int(s.nextId) || !num(s.gold) || !int(s.depth,1000000) || !num(s.savedAt,1e15) || !int(s.clock) || !int(s.applicantTimer,119) || typeof s.auto !== 'boolean' || !['push','farm','survey'].includes(s.policy) || !int(s.farmDepth,1000000) || s.farmDepth < 1) fail();
   if(!int(s.pushLimit,1000000))fail();
+  if(!int(s.delveSeed,4294967295))fail();
   if(!s.upgrades) fail(); s.upgrades.mentorship ??= 0; if(s.upgrades.cartography===undefined)s.upgrades.cartography=0;
   s.recovery ??= {enabled:false,rooms:10,percent:80,remaining:0,depth:0};
   const recovery=s.recovery;
@@ -371,7 +387,7 @@ function validateSave(s) {
     r.events ??= []; r.seed ??= null; r.frontId ??= null; r.enemy ??= null; r.at ??= null;
     if (!events(r.events) || (r.seed !== null && !int(r.seed,4294967295)) || (r.frontId!==null&&!r.units.some(u=>u.id===r.frontId)) || (r.at!==null&&!int(r.at))) fail();
     const enemy=r.enemy;
-    if(enemy!==null){if(!enemy||typeof enemy!=='object')fail();enemy.reflected??=0;if(typeof enemy.name!=='string'||enemy.name.length>80||!num(enemy.hp)||!num(enemy.maxHp)||enemy.maxHp<=0||enemy.hp>enemy.maxHp||!num(enemy.blocked)||!num(enemy.healing)||!num(enemy.reflected)||typeof enemy.boss!=='boolean'||!int(enemy.region,STRATA.length-1))fail();}
+    if(enemy!==null){if(!enemy||typeof enemy!=='object')fail();enemy.reflected??=0;enemy.modifier??=null;enemy.eroded??=0;if((enemy.modifier!==null&&(!Object.hasOwn(ENCOUNTER_MODIFIERS,enemy.modifier)||r.depth<70||enemy.boss))||!num(enemy.eroded)||(enemy.modifier===null&&enemy.eroded!==0)||typeof enemy.name!=='string'||enemy.name.length>80||!num(enemy.hp)||!num(enemy.maxHp)||enemy.maxHp<=0||enemy.hp>enemy.maxHp||!num(enemy.blocked)||!num(enemy.healing)||!num(enemy.reflected)||typeof enemy.boss!=='boolean'||!int(enemy.region,STRATA.length-1))fail();}
   };
   if(s.lastReport!==null) validateReport(s.lastReport);
   s.reports ??= s.lastReport?[s.lastReport]:[]; if(!Array.isArray(s.reports)||s.reports.length>8) fail();
@@ -390,6 +406,8 @@ function validateSave(s) {
     if(!s.party.includes(e.frontId)) fail();
     for(const u of e.units){ const actor=s.roster.find(a=>a.id===u.id); if(u.technique===undefined)u.technique=actor.technique; if(u.technique!==null && (!Object.hasOwn(TECHNIQUES,u.technique)||TECHNIQUES[u.technique].classId!==actor.classId||s.depth<(TECHNIQUES[u.technique].unlockDepth||0))) fail(); u.name ??= actor.name; u.classId ??= actor.classId; u.level ??= actor.level; u.taken ??= 0; if(typeof u.name!=='string'||u.name.length>40||u.classId!==actor.classId||!int(u.level,MAX_LEVEL)||u.level<1||!num(u.taken)) fail(); u.equipment ??= null; if(u.equipment!==null && !s.equipmentUnlocked.includes(u.equipment)) fail(); }
     e.enemy.blocked ??= 0; e.enemy.healing ??= 0; e.enemy.reflection??=0; e.enemy.reflected??=0; if(!num(e.enemy.blocked)||!num(e.enemy.healing)||!num(e.enemy.reflection,1)||!num(e.enemy.reflected)) fail();
+    e.enemy.modifier??=null;e.enemy.erosion??=0;e.enemy.eroded??=0;e.enemy.attackCount??=0;
+    if(!int(e.enemy.attackCount,180)||!num(e.enemy.erosion,1)||!num(e.enemy.eroded)||(e.enemy.modifier!==null&&(!Object.hasOwn(ENCOUNTER_MODIFIERS,e.enemy.modifier)||e.depth<70||e.enemy.boss||e.enemy.erosion<=0))||(e.enemy.modifier===null&&(e.enemy.erosion!==0||e.enemy.eroded!==0)))fail();
     if (typeof e.enemy.name !== 'string' || e.enemy.name.length > 80 || typeof e.enemy.boss !== 'boolean' || !int(e.enemy.region,STRATA.length-1)) fail();
   }
 }
