@@ -61,6 +61,13 @@ function careerControls(a) {
   const c=a.career,format=n=>n.toLocaleString();
   return `<details class="combat-numbers" data-persist="career-${a.id}"><summary>Guild record · ${format(c.wins)} ${c.wins===1?'victory':'victories'}</summary><p>${c.complete?'Since joining the Guild':`Earlier history was not recorded; tracking began at Guild minute ${Math.floor(c.since/60)}`}. ${format(c.rooms)} completed rooms · ${format(c.rooms-c.wins)} unsuccessful · downed ${format(c.downed)} times.</p><p>Deepest victory: ${c.bestDepth?`depth ${format(c.bestDepth)}`:'none yet'} · ${format(c.bosses)} Gatekeepers defeated.</p><p>Completed-room totals: ${format(c.damage)} health damage · ${format(c.healing)} healing · ${format(c.blocked)} shield absorbed · ${format(c.cleansed)} statuses cleansed.</p></details>`;
 }
+function partyPlans(){
+  return state.partyPlans.map((plan,slot)=>{
+    if(!plan)return `<article class="card"><h3>Slot ${slot+1}</h3><p>No party saved yet.</p></article>`;
+    const status=E.partyPlanStatus(state,slot);
+    return `<article class="card"><small>SLOT ${slot+1}</small><h3>${esc(plan.name)}</h3><ol>${plan.members.map(m=>{const a=state.roster.find(a=>a.id===m.id);return `<li>${esc(a?.name||m.name)} · ${CLASSES[m.classId].name}${a?` · Lv ${a.level}`:' · unavailable'}<br><small>${m.equipment?EQUIPMENT[m.equipment].name:'No equipment'}</small></li>`;}).join('')}</ol>${status.reason?`<p>${esc(status.reason)}</p>`:''}<button data-action="apply-plan" data-slot="${slot}" ${state.expedition||!status.usable?'disabled':''}>Use ${esc(plan.name)}</button></article>`;
+  }).join('');
+}
 function render() {
   const s = state, e = s.expedition, targetDepth = e?.depth || (s.policy==='farm'?Math.min(s.farmDepth,Math.max(1,s.depth)):s.depth+1), region = E.stratum(targetDepth);
   $('gold').textContent = Math.floor(s.gold).toLocaleString();
@@ -85,6 +92,9 @@ function render() {
   $('start').disabled = !!e || !s.party.length; $('retreat').disabled = !e;
   html('battle-party', e ? e.units.map(u => { const a = s.roster.find(a=>a.id===u.id); return `<div class="battle-unit"><strong>${esc(a.name)}</strong> · ${CLASSES[a.classId].name}${bar(u.hp,u.maxHp)}<small>${u.hp}/${u.maxHp} HP · ${u.shield} shield · ${u.damage} damage · ${u.healing} healing${u.status.length?` · ${u.status.map(x=>x.type).join(", ")}`:""}${u.hp<=0?' · downed':''}</small></div>`; }).join('') : `<p>${esc(partyAdvice(s))}</p><div class="lineup">${s.party.map((id,i)=>{ const a=s.roster.find(a=>a.id===id); return `<div><span>${i+1}. ${esc(a.name)} · ${CLASSES[a.classId].name}</span><button data-action="earlier" data-id="${id}" aria-label="Move ${esc(a.name)} earlier" ${i===0?'disabled':''}>↑</button><button data-action="later" data-id="${id}" aria-label="Move ${esc(a.name)} later" ${i===s.party.length-1?'disabled':''}>↓</button></div>`; }).join('')}</div>`);
   $('party-count').textContent = `${s.party.length}/${E.partySlots(s)} party slots`;
+  $('party-plans').hidden=s.depth<5;
+  $('save-plan').disabled=!!s.expedition||!s.party.length;
+  html('plan-list',partyPlans());
   html('roster-cards', s.roster.map(a=>character(a)).join('') || '<div class="empty">Your guildhall is quiet. Three applicants await at the door.<br>Start with a guardian, a ranger, and a cleric.</div>');
   html('applicant-cards', s.applicants.map(a=>character(a,true)).join('') || '<div class="empty">All applicants recruited. Empty spaces refill automatically.</div>');
   $('applicant-timer').textContent = `Unfilled applicant spaces refill in ${120-s.applicantTimer}s. Current applicants stay until you seek a new batch. New applicants arrive at level ${Math.min(E.MAX_LEVEL,1+Math.floor(s.depth/10))}. Each 10 frontier depths improves future recruitment. At depth 10, future applicants may bring distinct shield, healing or bleed techniques. Existing adventurers keep their technique. Hire cost: 25 gold + 10 per level above 1. A guild with no adventurers and insufficient funds can hire one relief volunteer for free.`;
@@ -108,11 +118,13 @@ document.addEventListener('click', event => {
   if (b.dataset.action === 'upgrade') ok = E.buyUpgrade(state,b.dataset.key);
   if (b.dataset.action === 'commission') ok = E.unlockEquipment(state,b.dataset.key);
   if (b.dataset.action === 'mentor') ok = E.mentor(state,id,b.dataset.mode);
+  if (b.dataset.action === 'apply-plan') ok = E.applyPartyPlan(state,Number(b.dataset.slot));
   if (b.dataset.action === 'dismiss' && confirm('Dismiss this adventurer permanently? Their levels and XP will be lost.')) ok = E.dismiss(state,id);
   if (ok) { message(''); save(); render(); }
 });
 document.addEventListener('change',event=>{ if(paused || !event.target.matches('select[data-equip]')) return; if(E.equip(state,Number(event.target.dataset.equip),event.target.value||null)){save();render();} });
 $('recover').onchange = event => { E.configureRecovery(state,event.target.checked); save(); render(); };
+$('save-plan').onclick = () => { if(E.savePartyPlan(state,Number($('plan-slot').value),$('plan-name').value)){ $('plan-name').value=''; save(); render(); message('Party plan saved in the selected slot.'); } };
 $('recovery-rooms').onchange = event => { E.configureRecovery(state,state.recovery.enabled,Number(event.target.value)); save(); render(); };
 $('recovery-percent').onchange = event => { E.configureRecovery(state,state.recovery.enabled,state.recovery.rooms,Number(event.target.value)); save(); render(); };
 $('start').onclick = () => { state.farmDepth = Math.max(1,Math.min(Math.max(1,state.depth), Math.floor(Number($('farm-depth').value)||1))); E.startExpedition(state); save(); render(); };

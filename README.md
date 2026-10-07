@@ -46,3 +46,5 @@ Each roster card keeps a Guild record of completed-room victories, Gatekeepers, 
 After depth 5, optional recovery orders farm a safer depth for 5, 10 or 20 victories after an automatic frontier defeat, then retry. A failed recovery farm stops orders. Recall, changing Orders or disabling automatic repeats cancels the queued recovery. The policy also works offline.
 
 Recovery depth can be 60%, 80% or 95% of the frontier, skipping Gatekeepers. The plan previews its current target. Shallower farms finish more rooms; deeper farms offer more XP per room. Queued recovery freezes its depth and victory count until it completes or is canceled.
+
+After depth 5, save up to three named party plans from the roster. Each records its members, order and equipment. Switch between fights using current levels and stats. A dismissed member makes the plan unavailable until you overwrite it with an updated party.

@@ -32,7 +32,7 @@ export const hireCost = a => 25 + (a.level - 1) * 10;
 export const recruitmentCost = (s, a) => s.roster.length === 0 && s.gold < hireCost(a) ? 0 : hireCost(a);
 export const xpNeeded = a => 20 + (a.level - 1) * 12;
 export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
-  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, auto: false, recovery:{enabled:false,rooms:10,percent:80,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
+  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], partyPlans:[null,null,null], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, auto: false, recovery:{enabled:false,rooms:10,percent:80,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
   s.applicants = ['guardian', 'ranger', 'cleric'].map(c => generate(s, c));
   note(s, 'Your charter is signed. Recruit three adventurers and open the Delve.');
   return s;
@@ -113,6 +113,28 @@ export function mentor(s,id,mode='one') {
   s.gold-=quote.cost;a.xp=Math.max(0,a.xp-mentorshipXP(a,quote.target));a.level=quote.target;
   note(s,`${quote.mentor} mentored ${a.name} to level ${a.level} for ${quote.cost} gold.`);
   return true;
+}
+export function partyPlanStatus(s,slot){
+  if(!Number.isInteger(slot)||slot<0||slot>2||!s.partyPlans[slot])return {usable:false,reason:'No party saved in this slot.'};
+  const plan=s.partyPlans[slot];
+  if(plan.members.length>partySlots(s))return {usable:false,reason:`Requires ${plan.members.length} party slots.`};
+  const absent=plan.members.filter(m=>!s.roster.some(a=>a.id===m.id));
+  if(absent.length)return {usable:false,reason:`Unavailable: ${absent.map(m=>m.name).join(', ')}. Save an updated party.`};
+  if(plan.members.some(m=>m.equipment!==null&&!s.equipmentUnlocked.includes(m.equipment)))return {usable:false,reason:'A required equipment pattern is unavailable.'};
+  if(plan.members.some(m=>s.roster.find(a=>a.id===m.id).classId!==m.classId))return {usable:false,reason:'A member has changed role. Save an updated party.'};
+  return {usable:true,reason:''};
+}
+export function savePartyPlan(s,slot,name=''){
+  if(s.expedition||s.depth<5||!s.party.length||!Number.isInteger(slot)||slot<0||slot>2||typeof name!=='string'||name.trim().length>30)return false;
+  const label=name.trim()||s.partyPlans[slot]?.name||`Party ${slot+1}`;
+  s.partyPlans[slot]={name:label,members:s.party.map(id=>{const a=s.roster.find(a=>a.id===id);return {id,name:a.name,classId:a.classId,equipment:a.equipment};})};
+  note(s,`${label} party plan saved.`);return true;
+}
+export function applyPartyPlan(s,slot){
+  if(s.expedition||s.depth<5||!partyPlanStatus(s,slot).usable)return false;
+  const plan=s.partyPlans[slot];s.party=plan.members.map(m=>m.id);
+  for(const m of plan.members)s.roster.find(a=>a.id===m.id).equipment=m.equipment;
+  note(s,`${plan.name} party plan applied.`);return true;
 }
 function abilityCooldown(a) { return abilityFor(a).cooldown+(EQUIPMENT[a.equipment]?.cooldown || 0); }
 export function stratum(depth) { return STRATA[Math.floor((depth - 1) / 10) % STRATA.length]; }
@@ -268,6 +290,13 @@ function validateSave(s) {
     if (!a || !int(a.id) || a.id < 1 || ids.has(a.id) || a.id >= s.nextId || typeof a.name !== 'string' || a.name.length > 40 || !Object.hasOwn(CLASSES,a.classId) || !Object.hasOwn(ORIGINS,a.origin) || !ORIGINS[a.origin].classes.includes(a.classId) || !num(a.talent,1.05) || a.talent < .95 || !int(a.level,MAX_LEVEL) || a.level < 1 || !int(a.xp)) fail(); ids.add(a.id);
   }
   if (!Array.isArray(s.party) || s.party.length > partySlots(s) || new Set(s.party).size !== s.party.length || s.party.some(id => !s.roster.some(a => a.id === id))) fail();
+  s.partyPlans ??= [null,null,null];
+  if(!Array.isArray(s.partyPlans)||s.partyPlans.length!==3)fail();
+  for(const plan of s.partyPlans){
+    if(plan===null)continue;
+    if(!plan||typeof plan.name!=='string'||!plan.name.trim()||plan.name.length>30||!Array.isArray(plan.members)||!plan.members.length||plan.members.length>4||new Set(plan.members.map(m=>m?.id)).size!==plan.members.length)fail();
+    for(const m of plan.members)if(!m||!int(m.id)||m.id<1||m.id>=s.nextId||typeof m.name!=='string'||m.name.length>40||!Object.hasOwn(CLASSES,m.classId)||(m.equipment!==null&&(!Object.hasOwn(EQUIPMENT,m.equipment)||!s.equipmentUnlocked.includes(m.equipment))))fail();
+  }
   if (!s.records || ['wins','defeats','gold'].some(k => !num(s.records[k])) || !Array.isArray(s.log) || s.log.length > 40 || s.log.some(l => !l || !num(l.time) || typeof l.message !== 'string' || l.message.length > 500)) fail();
   const validateReport = r => {
     if (!r || !int(r.depth,1000000) || !num(r.reward) || !int(r.seconds,180) || typeof r.win !== 'boolean' || typeof r.reason !== 'string' || r.reason.length > 100 || !Array.isArray(r.units) || r.units.length > 4 || r.units.some(u => !u || !int(u.id) || !num(u.damage) || !num(u.healing) || typeof u.survived !== 'boolean')) fail();
