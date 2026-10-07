@@ -74,6 +74,10 @@ export function equipmentFactor(key,trigger,tags) {
   if(!Object.hasOwn(EQUIPMENT,key)) throw new Error('Unknown equipment.');
   return EQUIPMENT[key].modifiers.filter(m=>m.trigger===trigger && m.tags.some(tag=>tags.includes(tag))).reduce((n,m)=>n*m.factor,1);
 }
+export function combatPowers(a) {
+  const ability=CLASSES[a.classId].ability;
+  return { basic:a.attack*equipmentFactor(a.equipment,'attack',['physical']), ability:a.attack*equipmentFactor(a.equipment,'ability',ability.tags), cooldown:abilityCooldown(a) };
+}
 function abilityCooldown(a) { return CLASSES[a.classId].ability.cooldown+(EQUIPMENT[a.equipment]?.cooldown || 0); }
 export function stratum(depth) { return STRATA[Math.floor((depth - 1) / 10) % STRATA.length]; }
 export function makeEnemy(depth) {
@@ -138,7 +142,7 @@ export function tick(s) {
     const harm=statuses(u); if(harm>0) battleNote(e,`${s.roster.find(a=>a.id===u.id).name} suffers ${harm} damage from harmful statuses${u.hp<=0?' — downed':''}.`); if (u.hp <= 0 || e.enemy.hp <= 0) continue;
     const a = s.roster.find(a => a.id === u.id), c = CLASSES[a.classId];
     if (--u.abilityCooldown <= 0) {
-      const ability = c.ability, power=u.attack*equipmentFactor(u.equipment,'ability',ability.tags); u.abilityCooldown = ability.cooldown+(EQUIPMENT[u.equipment]?.cooldown || 0);
+      const ability = c.ability, powers=combatPowers(u), power=powers.ability; u.abilityCooldown = powers.cooldown;
       if (ability.effect === 'shield') { const before=u.shield; u.shield = Math.min(Math.round(u.maxHp * .6), u.shield + Math.round(power * ability.scale)); battleNote(e,`${a.name}: Bulwark grants ${u.shield-before} shield.`); }
       if (ability.effect === 'heal') {
         const target = e.units.filter(x => x.hp > 0).sort((a,b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
@@ -146,7 +150,7 @@ export function tick(s) {
       }
       if (ability.effect === 'bleed') { u.damage += hit(e.enemy, power); e.enemy.status.push({ type: 'bleed', source: u.id, power: Math.round(power * ability.scale), remaining: 4 }); battleNote(e,`${a.name}: Barbed arrow inflicts a four-second bleed.`); }
     }
-    if (--u.cooldown <= 0 && e.enemy.hp > 0) { u.cooldown = u.speed; const critical=random(e)<.1, damage=hit(e.enemy,u.attack*equipmentFactor(u.equipment,'attack',['physical'])*(critical?1.5:1)); u.damage+=damage; battleNote(e,`${a.name} ${critical?'critically hits':'hits'} for ${damage} damage.`); }
+    if (--u.cooldown <= 0 && e.enemy.hp > 0) { u.cooldown = u.speed; const critical=random(e)<.1, damage=hit(e.enemy,combatPowers(u).basic*(critical?1.5:1)); u.damage+=damage; battleNote(e,`${a.name} ${critical?'critically hits':'hits'} for ${damage} damage.`); }
   }
   if (e.enemy.hp <= 0) { endRoom(s, true); return; }
   const alive = e.units.filter(u => u.hp > 0);

@@ -1,6 +1,6 @@
 import * as E from './engine.js';
 import { CLASSES, ORIGINS, UPGRADES, GATEKEEPERS, EQUIPMENT } from './content.js';
-import { compareRecruit, partyAdvice, reportAdvice } from './presentation.js';
+import { compareRecruit, partyAdvice, reportAdvice, combatDescription } from './presentation.js';
 const $ = id => document.getElementById(id);
 const key = 'idle-fodder-v1';
 const esc = x => String(x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -39,10 +39,16 @@ function equipmentControls(a) {
 function character(a, applicant = false) {
   const c = CLASSES[a.classId], o = ORIGINS[a.origin], t = E.stats(state,a), selected = state.party.includes(a.id);
   const disabled = applicant ? state.gold < E.recruitmentCost(state,a) || state.roster.length >= E.capacity(state) : !!state.expedition || (!selected && state.party.length >= E.partySlots(state));
-  return `<article class="card ${selected?'selected':''}" style="--character:${c.color}"><div class="card-heading"><div class="portrait" aria-hidden="true">${c.icon}</div><div><h3>${esc(a.name)}</h3><div class="subtitle">${o.species} ${c.name} · Level ${a.level} · ${c.role}</div></div></div><div class="stats"><div>${t.hp}<span>HP</span></div><div>${t.attack}<span>ATK</span></div><div>${t.armor}<span>ARMOR</span></div><div>${t.speed}s<span>ATTACK</span></div></div><div class="trait">${o.trait} · ${o.name}</div><p class="origin-detail">${o.detail} Talent ${Math.round(a.talent*100)}%.</p><p><strong>${c.ability.name}</strong> — ${c.description}</p>${applicant?comparison(a):equipmentControls(a)}${!applicant?`${bar(a.xp,E.xpNeeded(a),'xp-bar')}<small>${a.xp} / ${E.xpNeeded(a)} XP</small>`:''}<button data-action="${applicant?'hire':'assign'}" data-id="${a.id}" ${disabled?'disabled':''} class="${applicant?'primary':''}">${applicant?E.recruitmentCost(state,a) === 0 ? 'Recruit relief volunteer · Free' : `Recruit · ${E.recruitmentCost(state,a)} gold`:selected?'✓ In party · Remove':'Assign to party'}</button>${!applicant?`<button class="dismiss" data-action="dismiss" data-id="${a.id}" ${state.expedition?'disabled':''}>Dismiss adventurer…</button>`:''}</article>`;
+  return `<article class="card ${selected?'selected':''}" style="--character:${c.color}"><div class="card-heading"><div class="portrait" aria-hidden="true">${c.icon}</div><div><h3>${esc(a.name)}</h3><div class="subtitle">${o.species} ${c.name} · Level ${a.level} · ${c.role}</div></div></div><div class="stats"><div>${t.hp}<span>HP</span></div><div>${t.attack}<span>POWER</span></div><div>${t.armor}<span>ARMOR</span></div><div>${t.speed}s<span>ATTACK</span></div></div><div class="trait">${o.trait} · ${o.name}</div><p class="origin-detail">${o.detail} Talent ${Math.round(a.talent*100)}%.</p><p><strong>${c.ability.name}</strong> — ${c.description}</p><details class="combat-numbers" data-persist="combat-${a.id}"><summary>Combat numbers</summary><p>${esc(combatDescription(state,a))}</p><p>Power above is the base for attacks and abilities. These numbers include current Guild upgrades and equipment; purchases during combat apply to the next room.</p></details>${applicant?comparison(a):equipmentControls(a)}${!applicant?`${bar(a.xp,E.xpNeeded(a),'xp-bar')}<small>${a.xp} / ${E.xpNeeded(a)} XP</small>`:''}<button data-action="${applicant?'hire':'assign'}" data-id="${a.id}" ${disabled?'disabled':''} class="${applicant?'primary':''}">${applicant?E.recruitmentCost(state,a) === 0 ? 'Recruit relief volunteer · Free' : `Recruit · ${E.recruitmentCost(state,a)} gold`:selected?'✓ In party · Remove':'Assign to party'}</button>${!applicant?`<button class="dismiss" data-action="dismiss" data-id="${a.id}" ${state.expedition?'disabled':''}>Dismiss adventurer…</button>`:''}</article>`;
 }
 const rendered = new Map();
-function html(id, content) { if (rendered.get(id) !== content) { $(id).innerHTML = content; rendered.set(id,content); } }
+function html(id, content) {
+  if (rendered.get(id) === content) return;
+  const open=new Set([...$(id).querySelectorAll('details[data-persist][open]')].map(detail=>detail.dataset.persist));
+  $(id).innerHTML = content;
+  for(const detail of $(id).querySelectorAll('details[data-persist]')) if(open.has(detail.dataset.persist)) detail.open=true;
+  rendered.set(id,content);
+}
 function render() {
   const s = state, e = s.expedition, targetDepth = e?.depth || (s.policy==='farm'?Math.min(s.farmDepth,Math.max(1,s.depth)):s.depth+1), region = E.stratum(targetDepth);
   $('gold').textContent = Math.floor(s.gold).toLocaleString();

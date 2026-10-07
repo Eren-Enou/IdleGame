@@ -792,3 +792,6 @@ footer button,.file-button {
 #archive summary { cursor: pointer; color: var(--teal); }
 .report-row > span { flex: 1 1 180px; line-height: 1.8; }
 .enemy-summary { font-size: 11px; color: var(--gold); }
+.combat-numbers { border-top: 1px solid var(--line); padding: 10px 0; font-size: 12px; }
+.combat-numbers summary { cursor: pointer; color: var(--teal); }
+.combat-numbers p { line-height: 1.6; }

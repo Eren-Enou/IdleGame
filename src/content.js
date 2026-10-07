@@ -1,5 +1,5 @@
 export const CLASSES = {
-  guardian: { name: 'Guardian', icon: '◆', role: 'Frontline', hp: 112, attack: 9, armor: 4, speed: 3, color: '#79c8c5', ability: { name: 'Bulwark', cooldown: 6, effect: 'shield', target: 'self', scale: 1.8, tags: ['ward'] }, description: 'Draws enemy attacks while standing. Bulwark grants a shield every 6 seconds.' },
+  guardian: { name: 'Guardian', icon: '◆', role: 'Frontline', hp: 112, attack: 9, armor: 4, speed: 3, color: '#79c8c5', ability: { name: 'Bulwark', cooldown: 6, effect: 'shield', target: 'self', scale: 1.8, tags: ['ward'] }, description: 'Draws enemy attacks while standing. Bulwark builds a personal shield.' },
   ranger: { name: 'Ranger', icon: '➶', role: 'Damage', hp: 70, attack: 15, armor: 1, speed: 2, color: '#c2d58e', ability: { name: 'Barbed arrow', cooldown: 5, effect: 'bleed', target: 'enemy', scale: .55, tags: ['physical', 'bleed'] }, description: 'Fast attacks. Barbed arrow deals damage and adds a 4-second bleed.' },
   cleric: { name: 'Cleric', icon: '✧', role: 'Support', hp: 76, attack: 10, armor: 2, speed: 3, color: '#e5bc7a', ability: { name: 'Mending light', cooldown: 5, effect: 'heal', target: 'lowest', scale: 2.5, tags: ['holy', 'heal'] }, description: 'Mending light heals the living ally with the lowest health percentage.' },
 };
