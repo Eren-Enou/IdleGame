@@ -22,7 +22,7 @@ export const hireCost = a => 25 + (a.level - 1) * 10;
 export const recruitmentCost = (s, a) => s.roster.length === 0 && s.gold < hireCost(a) ? 0 : hireCost(a);
 export const xpNeeded = a => 20 + (a.level - 1) * 12;
 export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
-  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0 }, policy: 'push', farmDepth: 1, auto: false, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null };
+  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0 }, policy: 'push', farmDepth: 1, auto: false, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
   s.applicants = ['guardian', 'ranger', 'cleric'].map(c => generate(s, c));
   note(s, 'Your charter is signed. Recruit three adventurers and open the Delve.');
   return s;
@@ -80,13 +80,14 @@ export function makeEnemy(depth) {
   const boss = depth % 5 === 0, region = Math.floor((depth - 1) / 10) % 3;
   const scale = (1 + depth * .18) * (1 + Math.floor(depth / 30) * .25);
   const hp = Math.round(70 * scale * (boss ? 2.3 : 1));
-  return { name: boss ? GATEKEEPERS[region].name : stratum(depth).enemies[(depth - 1) % 3], hp, maxHp: hp, attack: Math.round((5 + depth * 1.5) * (boss ? 1.35 : 1)), armor: boss ? 3 : 0, cooldown: 2, status: [], shield: boss ? Math.round(hp * .15) : 0, boss, region };
+  return { name: boss ? GATEKEEPERS[region].name : stratum(depth).enemies[(depth - 1) % 3], hp, maxHp: hp, attack: Math.round((5 + depth * 1.5) * (boss ? 1.35 : 1)), armor: boss ? 3 : 0, cooldown: 2, status: [], shield: boss ? Math.round(hp * .15) : 0, boss, region, blocked: 0, healing: 0 };
 }
 export function startExpedition(s) {
   if (s.expedition || !s.party.length) return false;
   const depth = s.policy === 'farm' ? Math.min(s.farmDepth, Math.max(1, s.depth)) : s.depth + 1;
   const seed = (random(s) * 4294967296) >>> 0;
-  s.expedition = { depth, elapsed: 0, seed, rng: seed, events: [], enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, ...t, equipment: a.equipment, maxHp: t.hp, shield: 0, cooldown: 1, abilityCooldown: abilityCooldown(a), status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
+  s.expedition = { depth, elapsed: 0, seed, rng: seed, events: [], enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, name: a.name, classId: a.classId, level: a.level, taken: 0, ...t, equipment: a.equipment, maxHp: t.hp, shield: 0, cooldown: 1, abilityCooldown: abilityCooldown(a), status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
+  s.expedition.frontId = s.expedition.units.find(u=>u.classId==='guardian')?.id || s.party[0];
   return true;
 }
 export function retreat(s) { if (!s.expedition) return false; s.expedition = null; s.auto = false; note(s, 'Expedition recalled safely. No rewards from the unfinished room.'); return true; }
@@ -94,7 +95,9 @@ function hit(target, amount, pierce = false) {
   let n = Math.max(1, Math.round(amount) - (pierce ? 0 : target.armor));
   const absorbed = Math.min(target.shield, n); target.shield -= absorbed; n -= absorbed;
   if ('blocked' in target) target.blocked += absorbed;
-  const damage = Math.min(target.hp, n); target.hp -= damage; return damage;
+  const damage = Math.min(target.hp, n); target.hp -= damage;
+  if ('taken' in target) target.taken += damage;
+  return damage;
 }
 function statuses(u, sources = []) {
   let total=0;
@@ -118,7 +121,10 @@ function endRoom(s, win) {
   } else { s.records.defeats++; s.auto = false; }
   const reason = win ? 'Victory' : e.elapsed >= 180 ? 'Stalemate: recalled after 180 seconds' : 'Defeat: the party was overwhelmed';
   battleNote(e,win?`${e.enemy.name} defeated.`:reason);
-  s.lastReport = { depth: e.depth, seed: e.seed, events: e.events, win, reward, seconds: e.elapsed, reason, units: e.units.map(u => ({ id: u.id, damage: u.damage, healing: u.healing, blocked: u.blocked, cleansed: u.cleansed, survived: u.hp > 0 })) };
+  s.lastReport = { depth: e.depth, at: s.clock, seed: e.seed, events: e.events, win, reward, seconds: e.elapsed, reason, frontId: e.frontId,
+    enemy: { name: e.enemy.name, hp: e.enemy.hp, maxHp: e.enemy.maxHp, blocked: e.enemy.blocked, healing: e.enemy.healing, boss: e.enemy.boss, region: e.enemy.region },
+    units: e.units.map(u => ({ id: u.id, name: u.name, classId: u.classId, level: u.level, equipment: u.equipment, taken: u.taken, damage: u.damage, healing: u.healing, blocked: u.blocked, cleansed: u.cleansed, survived: u.hp > 0 })) };
+  s.reports.unshift(s.lastReport); s.reports.length=Math.min(s.reports.length,8);
   note(s, `${reason} at depth ${e.depth}. ${win ? `+${reward} gold. Party recovered.` : 'Everyone returned safely. Try training, a healer, or a shallower farm.'}`);
   s.expedition = null;
 }
@@ -151,7 +157,7 @@ export function tick(s) {
     const beforeShield=target.shield, damage = hit(target, e.enemy.attack), absorbed=beforeShield-target.shield;
     battleNote(e,`${e.enemy.name} hits ${s.roster.find(a=>a.id===target.id).name} for ${damage} damage${absorbed?`, ${absorbed} absorbed by shield`:''}${target.hp<=0?' — downed':''}.`);
     if (e.enemy.region === 1) target.status.push({ type: 'burn', power: 2, remaining: 3 });
-    if (e.enemy.region === 2) e.enemy.hp = Math.min(e.enemy.maxHp, e.enemy.hp + Math.round(damage * .3));
+    if (e.enemy.region === 2) { const restored = Math.min(e.enemy.maxHp-e.enemy.hp,Math.round(damage*.3)); e.enemy.hp+=restored; e.enemy.healing+=restored; }
     if (e.enemy.boss && e.elapsed % 6 === 0) {
       const ability = GATEKEEPERS[e.enemy.region];
       if (ability.effect === 'shield') e.enemy.shield = Math.min(Math.round(e.enemy.maxHp * .3), e.enemy.shield + Math.round(e.enemy.maxHp * ability.scale));
@@ -189,12 +195,21 @@ function validateSave(s) {
   }
   if (!Array.isArray(s.party) || s.party.length > partySlots(s) || new Set(s.party).size !== s.party.length || s.party.some(id => !s.roster.some(a => a.id === id))) fail();
   if (!s.records || ['wins','defeats','gold'].some(k => !num(s.records[k])) || !Array.isArray(s.log) || s.log.length > 40 || s.log.some(l => !l || !num(l.time) || typeof l.message !== 'string' || l.message.length > 500)) fail();
-  if (s.lastReport !== null) {
-    const r = s.lastReport;
+  const validateReport = r => {
     if (!r || !int(r.depth,1000000) || !num(r.reward) || !int(r.seconds,180) || typeof r.win !== 'boolean' || typeof r.reason !== 'string' || r.reason.length > 100 || !Array.isArray(r.units) || r.units.length > 4 || r.units.some(u => !u || !int(u.id) || !num(u.damage) || !num(u.healing) || typeof u.survived !== 'boolean')) fail();
-    for (const u of r.units) { u.blocked ??= 0; u.cleansed ??= 0; if (!num(u.blocked) || !int(u.cleansed)) fail(); }
-    r.events ??= []; r.seed ??= null; if (!events(r.events) || (r.seed !== null && !int(r.seed,4294967295))) fail();
-  }
+    for (const u of r.units) {
+      const a=s.roster.find(a=>a.id===u.id);
+      u.blocked ??= 0; u.cleansed ??= 0; u.taken ??= null; u.name ??= a?.name || 'Former adventurer'; u.classId ??= a?.classId || null; u.level ??= null; if(u.equipment===undefined)u.equipment='unknown';
+      if (!num(u.blocked) || !int(u.cleansed) || (u.taken!==null&&!num(u.taken)) || typeof u.name!=='string' || u.name.length>40 || (u.classId!==null&&!Object.hasOwn(CLASSES,u.classId)) || (u.level!==null&&(!int(u.level,MAX_LEVEL)||u.level<1)) || (u.equipment!==null&&u.equipment!=='unknown'&&!Object.hasOwn(EQUIPMENT,u.equipment))) fail();
+    }
+    r.events ??= []; r.seed ??= null; r.frontId ??= null; r.enemy ??= null; r.at ??= null;
+    if (!events(r.events) || (r.seed !== null && !int(r.seed,4294967295)) || (r.frontId!==null&&!r.units.some(u=>u.id===r.frontId)) || (r.at!==null&&!int(r.at))) fail();
+    const enemy=r.enemy;
+    if(enemy!==null && (!enemy||typeof enemy.name!=='string'||enemy.name.length>80||!num(enemy.hp)||!num(enemy.maxHp)||enemy.maxHp<=0||enemy.hp>enemy.maxHp||!num(enemy.blocked)||!num(enemy.healing)||typeof enemy.boss!=='boolean'||!int(enemy.region,2))) fail();
+  };
+  if(s.lastReport!==null) validateReport(s.lastReport);
+  s.reports ??= s.lastReport?[s.lastReport]:[]; if(!Array.isArray(s.reports)||s.reports.length>8) fail();
+  for(const report of s.reports) validateReport(report);
   if (s.expedition !== null) {
     const e = s.expedition;
     if (!e || !int(e.depth,1000000) || e.depth < 1 || !int(e.elapsed,180) || !int(e.seed,4294967295) || !Array.isArray(e.units) || e.units.length !== s.party.length || !e.units.length || new Set(e.units.map(u => u.id)).size !== e.units.length) fail();
@@ -203,7 +218,10 @@ function validateSave(s) {
       if (!u || ['hp','maxHp','attack','armor','shield','cooldown'].some(k => !num(u[k])) || u.maxHp <= 0 || u.hp > u.maxHp || !Array.isArray(u.status) || u.status.length > 100 || u.status.some(x => !x || !['burn','bleed'].includes(x.type) || !num(x.power) || !int(x.remaining,4))) fail();
     }
     for (const u of e.units) { u.blocked ??= 0; u.cleansed ??= 0; u.cleanse ??= s.upgrades.infirmary > 0; if (!s.party.includes(u.id) || !int(u.speed,10) || u.speed < 1 || !num(u.abilityCooldown,10) || !num(u.damage) || !num(u.healing) || !num(u.blocked) || !int(u.cleansed) || typeof u.cleanse !== 'boolean') fail(); }
-    for(const u of e.units){ u.equipment ??= null; if(u.equipment!==null && !s.equipmentUnlocked.includes(u.equipment)) fail(); }
+    e.frontId ??= e.units.find(u=>s.roster.find(a=>a.id===u.id).classId==='guardian')?.id || e.units[0].id;
+    if(!s.party.includes(e.frontId)) fail();
+    for(const u of e.units){ const actor=s.roster.find(a=>a.id===u.id); u.name ??= actor.name; u.classId ??= actor.classId; u.level ??= actor.level; u.taken ??= 0; if(typeof u.name!=='string'||u.name.length>40||u.classId!==actor.classId||!int(u.level,MAX_LEVEL)||u.level<1||!num(u.taken)) fail(); u.equipment ??= null; if(u.equipment!==null && !s.equipmentUnlocked.includes(u.equipment)) fail(); }
+    e.enemy.blocked ??= 0; e.enemy.healing ??= 0; if(!num(e.enemy.blocked)||!num(e.enemy.healing)) fail();
     if (typeof e.enemy.name !== 'string' || e.enemy.name.length > 80 || typeof e.enemy.boss !== 'boolean' || !int(e.enemy.region,2)) fail();
   }
 }

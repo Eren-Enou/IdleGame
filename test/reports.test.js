@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as E from '../src/engine.js';
+import {reportAdvice} from '../src/presentation.js';
+function ready(){const s=E.createGame(123,0);for(const a of [...s.applicants]){E.recruit(s,a.id);E.assign(s,a.id);}return s;}
+function room(s){E.startExpedition(s);for(let i=0;s.expedition&&i<181;i++)E.tick(s);assert.equal(s.expedition,null);return s.lastReport;}
+test('report captures entering levels and equipment instead of later changes',()=>{const s=ready();s.roster.forEach(a=>{a.level=2;a.xp=E.xpNeeded(a)-1;});const r=room(s);assert.equal(r.units[0].level,2);assert.equal(s.roster[0].level,3);s.depth=10;s.gold=120;E.unlockEquipment(s,'steel');E.equip(s,s.party[0],'steel');assert.equal(r.units[0].equipment,null);});
+test('archive is bounded, survives reload and keeps dismissed adventurer names',()=>{const s=ready();s.policy='farm';for(let i=0;i<12;i++)room(s);assert.equal(s.reports.length,8);const name=s.lastReport.units[0].name;E.dismiss(s,s.lastReport.units[0].id);const save=E.serialize(s,0);assert.ok(Buffer.byteLength(save)<200000);const loaded=E.restore(save,0).state;assert.deepEqual(loaded.reports,s.reports);assert.equal(loaded.reports[0].units[0].name,name);});
+test('shield absorption and taken damage record different parts of a hit',()=>{const s=ready();s.depth=4;const r=room(s);assert.ok(r.units.some(u=>u.taken>0));assert.ok(r.units.some(u=>u.blocked>0));assert.ok(r.enemy.blocked>0);});
+test('siphoning reports only actual recovered health',()=>{const s=ready();s.depth=24;const r=room(s);assert.ok(r.enemy.healing>0);assert.ok(Number.isFinite(r.enemy.healing));});
+test('time-limit advice distinguishes survival from damage failure',()=>{const r={win:false,seconds:180,units:[{survived:true}],enemy:null};assert.match(reportAdvice(r),/still standing/);assert.match(reportAdvice(r),/sustained damage/);});
+test('Librarian advice identifies party-wide damage',()=>{assert.match(reportAdvice({win:false,seconds:10,units:[],enemy:{boss:true,region:1}}),/cannot intercept/);});
+test('legacy reports preserve available outcomes without inventing equipment or levels',()=>{const s=ready();room(s);delete s.reports;delete s.lastReport.enemy;for(const u of s.lastReport.units){delete u.name;delete u.classId;delete u.level;delete u.equipment;delete u.taken;}const loaded=E.restore(E.serialize(s,0),0).state;assert.equal(loaded.reports.length,1);assert.equal(loaded.lastReport.units[0].equipment,'unknown');assert.equal(loaded.lastReport.units[0].taken,null);assert.equal(loaded.lastReport.units[0].level,null);});
+test('malformed archived reports are rejected before the UI sees them',()=>{for(const mutate of [s=>s.reports.push({}),s=>s.lastReport.enemy='',s=>s.reports[0].units[0].equipment='__proto__',s=>s.reports[0].units[0].taken=-1]){const s=ready();room(s);mutate(s);assert.throws(()=>E.restore(E.serialize(s,0),0));}});

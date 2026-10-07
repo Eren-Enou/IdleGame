@@ -1,6 +1,6 @@
 import * as E from './engine.js';
 import { CLASSES, ORIGINS, UPGRADES, GATEKEEPERS, EQUIPMENT } from './content.js';
-import { compareRecruit, partyAdvice } from './presentation.js';
+import { compareRecruit, partyAdvice, reportAdvice } from './presentation.js';
 const $ = id => document.getElementById(id);
 const key = 'idle-fodder-v1';
 const esc = x => String(x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -27,6 +27,10 @@ function comparison(a) {
   return `<p class="comparison">Compared at level ${c.level} with ${esc(c.peer.name)}:<br>${delta(c.delta.hp)} HP · ${delta(c.delta.attack)} attack · ${delta(c.delta.armor)} armor.<br>Compared before equipment; current stats above reflect this recruit's actual level.</p>`;
 }
 function timeline(events) { return `<ol class="combat-timeline">${events.map(event=>`<li><small>${event.time}s</small> ${esc(event.message)}</li>`).join('')}</ol>`; }
+function reportBody(r) {
+  const enemy=r.enemy, gear=u=>u.equipment==='unknown'?'Equipment not recorded':u.equipment?EQUIPMENT[u.equipment].name:'No equipment';
+  return `<p>${esc(reportAdvice(r))}</p>${enemy?`<p class="enemy-summary">${esc(enemy.name)} ended at ${enemy.hp}/${enemy.maxHp} HP · ${enemy.blocked} damage absorbed by shields · ${enemy.healing} health recovered.</p>`:''}<div class="report-row">${r.units.map(u=>`<span><strong>${esc(u.name)}</strong>${u.level?` · Lv ${u.level}`:''} · ${gear(u)}<br>${u.damage} damage · ${u.healing} healing · ${u.blocked} shield absorbed · ${u.taken===null?'damage taken not recorded':`${u.taken} damage taken`} · ${u.cleansed} cleansed${u.survived?'':' · downed'}</span>`).join('')}</div>`;
+}
 function equipmentControls(a) {
   if(state.depth<5) return '';
   const item=EQUIPMENT[a.equipment];
@@ -60,7 +64,9 @@ function render() {
   html('upgrades', Object.entries(UPGRADES).map(([k,u])=>`<article class="card upgrade"><div class="rank">RANK ${s.upgrades[k]} / ${u.max}</div><h3>${u.name}</h3><p>${u.description}</p><button data-action="upgrade" data-key="${k}" ${s.gold<E.upgradeCost(s,k)||s.upgrades[k]>=u.max||s.depth<(u.unlockDepth||0)?'disabled':''}>${s.depth<(u.unlockDepth||0)?`Unlocks at depth ${u.unlockDepth}`:s.upgrades[k]>=u.max?'Fully developed':`Improve · ${E.upgradeCost(s,k).toLocaleString()} gold`}</button></article>`).join('') + (s.depth>=5?Object.entries(EQUIPMENT).map(([k,item])=>`<article class="card upgrade"><div class="rank">GUILD WORKSHOP</div><h3>${item.name}</h3><p>${item.description}</p><button data-action="commission" data-key="${k}" ${s.depth<10||s.gold<item.cost||s.equipmentUnlocked.includes(k)?'disabled':''}>${s.equipmentUnlocked.includes(k)?'Available on roster':s.depth<10?'Unlocks at depth 10':`Commission · ${item.cost} gold`}</button></article>`).join(''):''));
   const r = s.lastReport;
   html('combat-feed', e ? `<div class="battle-caption">LIVE COMBAT · SEED ${e.seed}</div>${e.events.length?timeline(e.events.slice(0,5)):'<p class="section-intro">The party enters the chamber.</p>'}` : '');
-  html('report', r ? `<strong>Last expedition · Depth ${r.depth}</strong> — ${esc(r.reason)} · ${r.seconds}s · +${r.reward} gold${r.win?"":"<p>Try farming a conquered room for XP and gold, then adjust the party or invest in the Guild. No adventurers were lost.</p>"}<div class="report-row">${r.units.map(u=>`<span>${esc(s.roster.find(a=>a.id===u.id)?.name||'Former adventurer')}: ${u.damage} damage / ${u.healing} healing / ${u.blocked ?? 0} shield absorbed / ${u.cleansed ?? 0} cleansed${u.survived?'':' / downed'}</span>`).join('')}</div><details><summary>Final combat moments${r.seed===null?'':` · seed ${r.seed}`}</summary>${timeline(r.events)}</details>` : '');
+  html('report', r ? `<strong>Last expedition · Depth ${r.depth}</strong> — ${esc(r.reason)} · ${r.seconds}s · +${r.reward} Gold${reportBody(r)}<details><summary>Final combat moments${r.seed===null?'':` · seed ${r.seed}`}</summary>${timeline(r.events)}</details>` : '');
+  $('archive').hidden = s.reports.length<2;
+  html('archive-list',s.reports.map(r=>`<details><summary>Depth ${r.depth} · ${r.win?'Victory':'Defeat'} · ${r.seconds}s · +${r.reward} Gold${r.at!==null?` · Guild minute ${Math.floor(r.at/60)}`:''}</summary>${reportBody(r)}</details>`).join(''));
   html('log', s.log.slice(0,7).map(l=>`<li><small>${Math.floor(l.time/60)}:${String(l.time%60).padStart(2,'0')}</small>${esc(l.message)}</li>`).join(''));
 }
 document.addEventListener('click', event => {

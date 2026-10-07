@@ -786,3 +786,9 @@ footer button,.file-button {
   cursor: pointer;
   color: var(--teal);
 }
+
+#archive[hidden] { display: none; }
+#archive details { border-top: 1px solid var(--line); padding: 14px 0; color: var(--muted); font-size: 12px; }
+#archive summary { cursor: pointer; color: var(--teal); }
+.report-row > span { flex: 1 1 180px; line-height: 1.8; }
+.enemy-summary { font-size: 11px; color: var(--gold); }

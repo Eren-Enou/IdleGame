@@ -24,6 +24,9 @@ node tools/journey-study.js
 # Longer active-play scenarios: seconds and seed count
 node tools/journey-study.js 14400 20
 node tools/equipment-study.js
+node tools/gear-matrix.js
 ```
 
 The engine has no browser dependencies. Seeded generation, one-second combat, and offline resolution use the same code. Content lives in `src/content.js`; development findings and continuation priorities live in `docs/`.
+
+Expedition reports show enemy healing, shield absorption and individual contributions. Compare eight recent completed rooms in the archive; entering levels and equipment stay recorded after party changes.

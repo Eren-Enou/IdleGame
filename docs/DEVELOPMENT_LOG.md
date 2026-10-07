@@ -43,3 +43,9 @@ Experiment 005 simulated four-hour and day-long progression. Four-member parties
 Implemented two workshop patterns unlocked at depth 10, using existing Gold and shared attack/ability triggers and tags. Steel improves basic attacks but slows abilities; ritual improves ward/heal/bleed abilities but weakens basics. One equipped item per adventurer, freely changeable between fights. Legacy saves default to unequipped without resetting progress.
 
 Experiment 006 ran 2,400 equal-power encounters and validated every terminal save. Steel speeds easy farming; ritual can solve a near-wall Root Gatekeeper (100% vs 22% baseline wins at level 12/depth 35). Neither solves underpowered Ember encounters. Preserve this specialization rather than flattening everything into equal performance. Browser verified commissioning costs, per-character selection, modified cooldown descriptions and combat locks. All 49 tests pass.
+
+## 2026-10-06 — Expedition evidence and equipment matrix
+
+Experiment 007 ran 7,200 fights across four compositions and all three Gatekeepers. Ritual's near-wall strength has exceptions: support-heavy parties can survive yet time out against regenerating shields. Steel speeds comfortable farming but slower abilities can cost survival. Preserve specialization; no balance changes.
+
+Added entering level/equipment/name snapshots, enemy final health, actual siphoned healing, shield absorption and effective damage taken. An eight-room archive supports comparisons after party changes; older saves preserve known outcomes and mark missing metadata unrecorded. Failure guidance distinguishes timeout, party-wide cleave, siphoning and a fallen front line. All 57 tests passed, plus 30 one-hour journeys with complete save round-trips. Browser verified expanded reports and reload persistence without console errors. Next focus: exact combat numbers in preparation and character identity.
