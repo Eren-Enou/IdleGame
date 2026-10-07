@@ -5,11 +5,12 @@ export const MAX_LEVEL = 1000000;
 export function random(s) { s.rng = (Math.imul(s.rng, 1664525) + 1013904223) >>> 0; return s.rng / 4294967296; }
 const pick = (s, a) => a[Math.floor(random(s) * a.length)];
 const names = { Dwarf: ['Brin', 'Orra', 'Thorek', 'Dagna', 'Borin'], Elf: ['Ilyra', 'Thalen', 'Syl', 'Aerin', 'Veya'], Human: ['Mara', 'Edric', 'Nell', 'Rowan', 'Tamsin'] };
+function freshCareer(since,complete=true) { return {since,complete,rooms:0,wins:0,downed:0,bosses:0,bestDepth:0,damage:0,healing:0,blocked:0,cleansed:0}; }
 export function generate(s, forcedClass) {
   if (forcedClass && !Object.hasOwn(CLASSES,forcedClass)) throw new Error('Unknown adventurer class.');
   const origin = pick(s, Object.keys(ORIGINS).filter(k => !forcedClass || ORIGINS[k].classes.includes(forcedClass)));
   const o = ORIGINS[origin], classId = forcedClass || pick(s, o.classes);
-  const a={ id: s.nextId++, name: pick(s, names[o.species]), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(MAX_LEVEL,1 + Math.floor(s.depth / 10)), xp: 0, equipment: null, technique:null };
+  const a={ id: s.nextId++, name: pick(s, names[o.species]), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(MAX_LEVEL,1 + Math.floor(s.depth / 10)), xp: 0, equipment: null, technique:null, career:freshCareer(s.clock) };
   if(s.depth>=10) a.technique=pick(s,[null,null,...Object.keys(TECHNIQUES).filter(key=>TECHNIQUES[key].classId===classId)]);
   abilityFor(a);
   return a;
@@ -41,7 +42,7 @@ function battleNote(e, message) { e.events.unshift({ time: e.elapsed, message })
 export function recruit(s, id) {
   const a = s.applicants.find(a => a.id === id);
   if (!a || s.gold < recruitmentCost(s,a) || s.roster.length >= capacity(s)) return false;
-  s.gold -= recruitmentCost(s,a); s.roster.push(a); s.applicants = s.applicants.filter(x => x.id !== id);
+  s.gold -= recruitmentCost(s,a); a.career=freshCareer(s.clock); s.roster.push(a); s.applicants = s.applicants.filter(x => x.id !== id);
   note(s, `${a.name} joined the Guild.`); return true;
 }
 export function assign(s, id) {
@@ -146,6 +147,11 @@ function statuses(u, sources = []) {
 }
 function endRoom(s, win) {
   const e = s.expedition, reward = win ? Math.round((12 + e.depth * 3) * (e.enemy.boss ? 1.8 : 1)) : 0;
+  for(const u of e.units){
+    const a=s.roster.find(a=>a.id===u.id),career=a.career;
+    for(const [key,value] of Object.entries({rooms:1,wins:Number(win),downed:Number(u.hp<=0),bosses:Number(win&&e.enemy.boss),damage:u.damage,healing:u.healing,blocked:u.blocked,cleansed:u.cleansed}))career[key]=Math.min(1e12,career[key]+value);
+    if(win)career.bestDepth=Math.max(career.bestDepth,e.depth);
+  }
   s.gold = Math.min(1e12, s.gold + reward); s.records.gold = Math.min(1e12, s.records.gold + reward);
   if (win) {
     const oldDepth = s.depth;
@@ -230,6 +236,9 @@ function validateSave(s) {
   const ids = new Set();
   for (const a of [...s.roster, ...s.applicants]) {
     if(!a || typeof a !== 'object') fail();
+    a.career ??= freshCareer(s.clock,false);
+    const career=a.career;
+    if(!career||!int(career.since)||career.since>s.clock||typeof career.complete!=='boolean'||['rooms','wins','downed','bosses','cleansed'].some(k=>!int(career[k]))||['damage','healing','blocked'].some(k=>!num(career[k]))||!int(career.bestDepth,1000000)||career.wins>career.rooms||career.downed>career.rooms||career.bosses>career.wins)fail();
     a.technique ??= null; if(a.technique!==null && (!Object.hasOwn(TECHNIQUES,a.technique)||TECHNIQUES[a.technique].classId!==a.classId)) fail(); a.equipment ??= null; if(a.equipment!==null && !s.equipmentUnlocked.includes(a.equipment)) fail();
     if (!a || !int(a.id) || a.id < 1 || ids.has(a.id) || a.id >= s.nextId || typeof a.name !== 'string' || a.name.length > 40 || !Object.hasOwn(CLASSES,a.classId) || !Object.hasOwn(ORIGINS,a.origin) || !ORIGINS[a.origin].classes.includes(a.classId) || !num(a.talent,1.05) || a.talent < .95 || !int(a.level,MAX_LEVEL) || a.level < 1 || !int(a.xp)) fail(); ids.add(a.id);
   }

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as E from '../src/engine.js';
 import {TECHNIQUES} from '../src/content.js';
+import {mixedJourney} from './journey-scenarios.js';
 const classes=['guardian','ranger','cleric'];
 const options=classes.map(c=>[null,...Object.keys(TECHNIQUES).filter(k=>TECHNIQUES[k].classId===c)]);
 const outcomes=[];
@@ -22,13 +23,7 @@ for(const depth of [35,45,55])for(const equipment of ['none','steel','ritual']){
 for(const duration of [600,3600,14400]){
  const rows=[];
  for(let seed=1;seed<=10;seed++){
-  const s=E.createGame(seed,0);for(const a of [...s.applicants]){E.recruit(s,a.id);E.assign(s,a.id);}s.auto=true;let farmWins=0,lastWins=0,lastDefeats=0;
-  for(let t=0;t<duration;t++){
-   for(const k of s.upgrades.training<=s.upgrades.infirmary?['training','infirmary']:['infirmary','training'])E.buyUpgrade(s,k);
-   E.tick(s);
-   if(s.records.defeats>lastDefeats){s.policy='farm';s.farmDepth=Math.max(1,s.depth);s.auto=true;farmWins=0;lastDefeats=s.records.defeats;}
-   if(s.records.wins>lastWins){if(s.policy==='farm'&&++farmWins>=10)s.policy='push';lastWins=s.records.wins;}
-  }
+  const s=mixedJourney(seed,duration);
   assert.deepEqual(E.restore(E.serialize(s,0),0).state,s);
   const candidate=E.generate(s,'ranger'),veteran=s.roster.find(a=>a.classId==='ranger');
   const row={depth:s.depth,gold:s.gold,veteran:veteran.level,recruit:candidate.level,powerRatio:E.stats(s,candidate).attack/E.stats(s,veteran).attack};
