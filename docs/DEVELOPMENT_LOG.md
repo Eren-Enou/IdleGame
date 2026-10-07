@@ -55,3 +55,13 @@ Added entering level/equipment/name snapshots, enemy final health, actual siphon
 Roster and applicant cards now expose a Combat numbers disclosure with actual basic power, crit chance, ability magnitude, cooldown, shield cap, heal targeting/cleanse and bleed duration/armor behavior. Base attack is labeled Power to distinguish it from resulting damage. Engine and presentation share equipment power calculations, preserving fractional values until hit rounding. Removed the guardian description's fixed cooldown, which was incorrect with steel equipment. Open inspections follow character IDs through card refreshes and stay open when comparing equipment.
 
 All 60 tests pass. Repeated the 2,400-fight equipment study with identical results to experiment 006, including validated terminal saves. Browser verified steel/ritual ranger damage and cooldown changes with the panel staying open; no console errors. This improves preparation without changing balance. Character identity, procedural ability variety and exhausted late-game Gold sinks remain the next design questions.
+
+## 2026-10-06 — Recruit techniques with timing costs
+
+Added six class-constrained recruit techniques after depth 10, using existing ward/heal/bleed primitives and tags. Half of future applicants retain standard abilities; existing characters retain their abilities. Technique snapshots persist in combat and reports. Recruit comparisons identify differing techniques; exact combat numbers reflect timing, scaling and equipment.
+
+Experiment 008 ran two 6,300-fight passes, each validating every terminal save. Initial ranger variants improved almost every sampled matchup; reduced bleed throughput while retaining faster shots or stronger individual bleeds. Final outcomes vary by region and equipment. Sixty-nine tests cover deterministic generation, class constraints, nominal budgets, actual timing and backward-compatible saves. Thirty one-hour journey regressions remained comparable and round-tripped complete saves.
+
+### Review after six further iterations
+
+Playable loop and local persistence remain verified. Guild investments and fourth-slot recruitment change outcomes. Equipment and technique timing now interact rather than adding disconnected systems. Recruitment gains distinct ability identities, though names and longer character histories remain sparse. Stability has deterministic tests plus encounter/journey studies; enjoyment still requires human playtesting. Late-game Gold loses agency after finite facility ranks; character replacement, automated party policies and longer progression need further investigation. Next: examine coherent technique combinations and replacement economics before adding more classes or currencies.

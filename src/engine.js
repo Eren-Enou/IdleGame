@@ -1,4 +1,4 @@
-import { CLASSES, ORIGINS, UPGRADES, STRATA, GATEKEEPERS, EQUIPMENT } from './content.js';
+import { CLASSES, ORIGINS, UPGRADES, STRATA, GATEKEEPERS, EQUIPMENT, TECHNIQUES } from './content.js';
 export const VERSION = 1;
 export const MAX_OFFLINE = 4 * 60 * 60;
 export const MAX_LEVEL = 1000000;
@@ -9,7 +9,16 @@ export function generate(s, forcedClass) {
   if (forcedClass && !Object.hasOwn(CLASSES,forcedClass)) throw new Error('Unknown adventurer class.');
   const origin = pick(s, Object.keys(ORIGINS).filter(k => !forcedClass || ORIGINS[k].classes.includes(forcedClass)));
   const o = ORIGINS[origin], classId = forcedClass || pick(s, o.classes);
-  return { id: s.nextId++, name: pick(s, names[o.species]), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(MAX_LEVEL,1 + Math.floor(s.depth / 10)), xp: 0, equipment: null };
+  const a={ id: s.nextId++, name: pick(s, names[o.species]), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(MAX_LEVEL,1 + Math.floor(s.depth / 10)), xp: 0, equipment: null, technique:null };
+  if(s.depth>=10) a.technique=pick(s,[null,null,...Object.keys(TECHNIQUES).filter(key=>TECHNIQUES[key].classId===classId)]);
+  abilityFor(a);
+  return a;
+}
+export function abilityFor(a) {
+  if(!Object.hasOwn(CLASSES,a.classId)) throw new Error('Unknown adventurer class.');
+  const technique=a.technique;
+  if(technique!=null && (!Object.hasOwn(TECHNIQUES,technique)||TECHNIQUES[technique].classId!==a.classId)) throw new Error('Invalid adventurer technique.');
+  return {...CLASSES[a.classId].ability,directScale:1,...(technique?TECHNIQUES[technique]:{})};
 }
 export function stats(s, a) {
   const c = CLASSES[a.classId], o = ORIGINS[a.origin], growth = 1 + (a.level - 1) * .12;
@@ -75,10 +84,10 @@ export function equipmentFactor(key,trigger,tags) {
   return EQUIPMENT[key].modifiers.filter(m=>m.trigger===trigger && m.tags.some(tag=>tags.includes(tag))).reduce((n,m)=>n*m.factor,1);
 }
 export function combatPowers(a) {
-  const ability=CLASSES[a.classId].ability;
+  const ability=abilityFor(a);
   return { basic:a.attack*equipmentFactor(a.equipment,'attack',['physical']), ability:a.attack*equipmentFactor(a.equipment,'ability',ability.tags), cooldown:abilityCooldown(a) };
 }
-function abilityCooldown(a) { return CLASSES[a.classId].ability.cooldown+(EQUIPMENT[a.equipment]?.cooldown || 0); }
+function abilityCooldown(a) { return abilityFor(a).cooldown+(EQUIPMENT[a.equipment]?.cooldown || 0); }
 export function stratum(depth) { return STRATA[Math.floor((depth - 1) / 10) % STRATA.length]; }
 export function makeEnemy(depth) {
   const boss = depth % 5 === 0, region = Math.floor((depth - 1) / 10) % 3;
@@ -90,7 +99,7 @@ export function startExpedition(s) {
   if (s.expedition || !s.party.length) return false;
   const depth = s.policy === 'farm' ? Math.min(s.farmDepth, Math.max(1, s.depth)) : s.depth + 1;
   const seed = (random(s) * 4294967296) >>> 0;
-  s.expedition = { depth, elapsed: 0, seed, rng: seed, events: [], enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, name: a.name, classId: a.classId, level: a.level, taken: 0, ...t, equipment: a.equipment, maxHp: t.hp, shield: 0, cooldown: 1, abilityCooldown: abilityCooldown(a), status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
+  s.expedition = { depth, elapsed: 0, seed, rng: seed, events: [], enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, name: a.name, classId: a.classId, level: a.level, technique:a.technique, taken: 0, ...t, equipment: a.equipment, maxHp: t.hp, shield: 0, cooldown: 1, abilityCooldown: abilityCooldown(a), status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
   s.expedition.frontId = s.expedition.units.find(u=>u.classId==='guardian')?.id || s.party[0];
   return true;
 }
@@ -127,7 +136,7 @@ function endRoom(s, win) {
   battleNote(e,win?`${e.enemy.name} defeated.`:reason);
   s.lastReport = { depth: e.depth, at: s.clock, seed: e.seed, events: e.events, win, reward, seconds: e.elapsed, reason, frontId: e.frontId,
     enemy: { name: e.enemy.name, hp: e.enemy.hp, maxHp: e.enemy.maxHp, blocked: e.enemy.blocked, healing: e.enemy.healing, boss: e.enemy.boss, region: e.enemy.region },
-    units: e.units.map(u => ({ id: u.id, name: u.name, classId: u.classId, level: u.level, equipment: u.equipment, taken: u.taken, damage: u.damage, healing: u.healing, blocked: u.blocked, cleansed: u.cleansed, survived: u.hp > 0 })) };
+    units: e.units.map(u => ({ id: u.id, name: u.name, classId: u.classId, level: u.level, technique:u.technique, equipment: u.equipment, taken: u.taken, damage: u.damage, healing: u.healing, blocked: u.blocked, cleansed: u.cleansed, survived: u.hp > 0 })) };
   s.reports.unshift(s.lastReport); s.reports.length=Math.min(s.reports.length,8);
   note(s, `${reason} at depth ${e.depth}. ${win ? `+${reward} gold. Party recovered.` : 'Everyone returned safely. Try training, a healer, or a shallower farm.'}`);
   s.expedition = null;
@@ -140,15 +149,15 @@ export function tick(s) {
   if(bleed>0) battleNote(e,`Bleed deals ${bleed} damage to ${e.enemy.name}.`);
   for (const u of e.units) {
     const harm=statuses(u); if(harm>0) battleNote(e,`${s.roster.find(a=>a.id===u.id).name} suffers ${harm} damage from harmful statuses${u.hp<=0?' — downed':''}.`); if (u.hp <= 0 || e.enemy.hp <= 0) continue;
-    const a = s.roster.find(a => a.id === u.id), c = CLASSES[a.classId];
+    const a = s.roster.find(a => a.id === u.id);
     if (--u.abilityCooldown <= 0) {
-      const ability = c.ability, powers=combatPowers(u), power=powers.ability; u.abilityCooldown = powers.cooldown;
-      if (ability.effect === 'shield') { const before=u.shield; u.shield = Math.min(Math.round(u.maxHp * .6), u.shield + Math.round(power * ability.scale)); battleNote(e,`${a.name}: Bulwark grants ${u.shield-before} shield.`); }
+      const ability = abilityFor(u), powers=combatPowers(u), power=powers.ability; u.abilityCooldown = powers.cooldown;
+      if (ability.effect === 'shield') { const before=u.shield; u.shield = Math.min(Math.round(u.maxHp * .6), u.shield + Math.round(power * ability.scale)); battleNote(e,`${a.name}: ${ability.name} grants ${u.shield-before} shield.`); }
       if (ability.effect === 'heal') {
         const target = e.units.filter(x => x.hp > 0).sort((a,b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-        if (target) { const healing = Math.min(target.maxHp - target.hp, Math.round(power * ability.scale)); target.hp += healing; u.healing += healing; let cleansed=''; if (u.cleanse && target.status.length) { cleansed=target.status.shift().type; u.cleansed++; } if(healing>0||cleansed) battleNote(e,`${a.name} heals ${s.roster.find(a=>a.id===target.id).name} for ${healing}${cleansed?` and cleanses ${cleansed}`:''}.`); }
+        if (target) { const healing = Math.min(target.maxHp - target.hp, Math.round(power * ability.scale)); target.hp += healing; u.healing += healing; let cleansed=''; if (u.cleanse && target.status.length) { cleansed=target.status.shift().type; u.cleansed++; } if(healing>0||cleansed) battleNote(e,`${a.name}: ${ability.name} heals ${s.roster.find(a=>a.id===target.id).name} for ${healing}${cleansed?` and cleanses ${cleansed}`:''}.`); }
       }
-      if (ability.effect === 'bleed') { u.damage += hit(e.enemy, power); e.enemy.status.push({ type: 'bleed', source: u.id, power: Math.round(power * ability.scale), remaining: 4 }); battleNote(e,`${a.name}: Barbed arrow inflicts a four-second bleed.`); }
+      if (ability.effect === 'bleed') { u.damage += hit(e.enemy, power*ability.directScale); e.enemy.status.push({ type: 'bleed', source: u.id, power: Math.round(power * ability.scale), remaining: 4 }); battleNote(e,`${a.name}: ${ability.name} inflicts a four-second bleed.`); }
     }
     if (--u.cooldown <= 0 && e.enemy.hp > 0) { u.cooldown = u.speed; const critical=random(e)<.1, damage=hit(e.enemy,combatPowers(u).basic*(critical?1.5:1)); u.damage+=damage; battleNote(e,`${a.name} ${critical?'critically hits':'hits'} for ${damage} damage.`); }
   }
@@ -194,7 +203,7 @@ function validateSave(s) {
   const ids = new Set();
   for (const a of [...s.roster, ...s.applicants]) {
     if(!a || typeof a !== 'object') fail();
-    a.equipment ??= null; if(a.equipment!==null && !s.equipmentUnlocked.includes(a.equipment)) fail();
+    a.technique ??= null; if(a.technique!==null && (!Object.hasOwn(TECHNIQUES,a.technique)||TECHNIQUES[a.technique].classId!==a.classId)) fail(); a.equipment ??= null; if(a.equipment!==null && !s.equipmentUnlocked.includes(a.equipment)) fail();
     if (!a || !int(a.id) || a.id < 1 || ids.has(a.id) || a.id >= s.nextId || typeof a.name !== 'string' || a.name.length > 40 || !Object.hasOwn(CLASSES,a.classId) || !Object.hasOwn(ORIGINS,a.origin) || !ORIGINS[a.origin].classes.includes(a.classId) || !num(a.talent,1.05) || a.talent < .95 || !int(a.level,MAX_LEVEL) || a.level < 1 || !int(a.xp)) fail(); ids.add(a.id);
   }
   if (!Array.isArray(s.party) || s.party.length > partySlots(s) || new Set(s.party).size !== s.party.length || s.party.some(id => !s.roster.some(a => a.id === id))) fail();
@@ -203,7 +212,7 @@ function validateSave(s) {
     if (!r || !int(r.depth,1000000) || !num(r.reward) || !int(r.seconds,180) || typeof r.win !== 'boolean' || typeof r.reason !== 'string' || r.reason.length > 100 || !Array.isArray(r.units) || r.units.length > 4 || r.units.some(u => !u || !int(u.id) || !num(u.damage) || !num(u.healing) || typeof u.survived !== 'boolean')) fail();
     for (const u of r.units) {
       const a=s.roster.find(a=>a.id===u.id);
-      u.blocked ??= 0; u.cleansed ??= 0; u.taken ??= null; u.name ??= a?.name || 'Former adventurer'; u.classId ??= a?.classId || null; u.level ??= null; if(u.equipment===undefined)u.equipment='unknown';
+      if(u.technique===undefined)u.technique="unknown"; if(u.technique!==null && u.technique!=="unknown" && (!Object.hasOwn(TECHNIQUES,u.technique)||TECHNIQUES[u.technique].classId!==u.classId)) fail(); u.blocked ??= 0; u.cleansed ??= 0; u.taken ??= null; u.name ??= a?.name || 'Former adventurer'; u.classId ??= a?.classId || null; u.level ??= null; if(u.equipment===undefined)u.equipment='unknown';
       if (!num(u.blocked) || !int(u.cleansed) || (u.taken!==null&&!num(u.taken)) || typeof u.name!=='string' || u.name.length>40 || (u.classId!==null&&!Object.hasOwn(CLASSES,u.classId)) || (u.level!==null&&(!int(u.level,MAX_LEVEL)||u.level<1)) || (u.equipment!==null&&u.equipment!=='unknown'&&!Object.hasOwn(EQUIPMENT,u.equipment))) fail();
     }
     r.events ??= []; r.seed ??= null; r.frontId ??= null; r.enemy ??= null; r.at ??= null;
@@ -224,7 +233,7 @@ function validateSave(s) {
     for (const u of e.units) { u.blocked ??= 0; u.cleansed ??= 0; u.cleanse ??= s.upgrades.infirmary > 0; if (!s.party.includes(u.id) || !int(u.speed,10) || u.speed < 1 || !num(u.abilityCooldown,10) || !num(u.damage) || !num(u.healing) || !num(u.blocked) || !int(u.cleansed) || typeof u.cleanse !== 'boolean') fail(); }
     e.frontId ??= e.units.find(u=>s.roster.find(a=>a.id===u.id).classId==='guardian')?.id || e.units[0].id;
     if(!s.party.includes(e.frontId)) fail();
-    for(const u of e.units){ const actor=s.roster.find(a=>a.id===u.id); u.name ??= actor.name; u.classId ??= actor.classId; u.level ??= actor.level; u.taken ??= 0; if(typeof u.name!=='string'||u.name.length>40||u.classId!==actor.classId||!int(u.level,MAX_LEVEL)||u.level<1||!num(u.taken)) fail(); u.equipment ??= null; if(u.equipment!==null && !s.equipmentUnlocked.includes(u.equipment)) fail(); }
+    for(const u of e.units){ const actor=s.roster.find(a=>a.id===u.id); if(u.technique===undefined)u.technique=actor.technique; if(u.technique!==null && (!Object.hasOwn(TECHNIQUES,u.technique)||TECHNIQUES[u.technique].classId!==actor.classId)) fail(); u.name ??= actor.name; u.classId ??= actor.classId; u.level ??= actor.level; u.taken ??= 0; if(typeof u.name!=='string'||u.name.length>40||u.classId!==actor.classId||!int(u.level,MAX_LEVEL)||u.level<1||!num(u.taken)) fail(); u.equipment ??= null; if(u.equipment!==null && !s.equipmentUnlocked.includes(u.equipment)) fail(); }
     e.enemy.blocked ??= 0; e.enemy.healing ??= 0; if(!num(e.enemy.blocked)||!num(e.enemy.healing)) fail();
     if (typeof e.enemy.name !== 'string' || e.enemy.name.length > 80 || typeof e.enemy.boss !== 'boolean' || !int(e.enemy.region,2)) fail();
   }

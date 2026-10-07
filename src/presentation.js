@@ -1,13 +1,13 @@
-import { stats, combatPowers } from './engine.js';
+import { stats, combatPowers, abilityFor } from './engine.js';
 import { CLASSES } from './content.js';
 export function combatDescription(s,a) {
-  const t=stats(s,a), ability=CLASSES[a.classId].ability, powers=combatPowers({...a,...t});
+  const t=stats(s,a), ability=abilityFor(a), powers=combatPowers({...a,...t});
   const basic=`Basic attacks: ${Math.round(powers.basic)} damage every ${t.speed}s before armor; 10% chance of a 50% stronger hit.`;
   const amount=Math.round(powers.ability*ability.scale);
   let effect;
   if(ability.effect==='shield') effect=`Adds ${amount} shield to self, up to ${Math.round(t.hp*.6)} stored shield.`;
   if(ability.effect==='heal') effect=`Restores up to ${amount} HP to the living ally with the lowest health percentage.${s.upgrades.infirmary>0?' Cleanses one harmful status.':''}`;
-  if(ability.effect==='bleed') effect=`Deals ${Math.round(powers.ability)} damage before armor, then ${amount} bleed damage each second for 4 seconds; bleed ignores armor.`;
+  if(ability.effect==='bleed') effect=`Deals ${Math.round(powers.ability*ability.directScale)} damage before armor, then ${amount} bleed damage each second for 4 seconds; bleed ignores armor.`;
   return `${basic} ${ability.name}: every ${powers.cooldown}s. ${effect} Shields absorb incoming damage.`;
 }
 export function compareRecruit(s, candidate) {

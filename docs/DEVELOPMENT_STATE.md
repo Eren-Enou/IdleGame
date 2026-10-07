@@ -1,36 +1,34 @@
 # Development state
 
-Goal remains active: build and repeatedly improve Idle Fodder according to DESIGN_CONSTITUTION.md. The first playable version is a milestone, not completion.
+Goal remains active. Continue meaningful development under DESIGN_CONSTITUTION.md and the autonomous directive; the playable foundation is not completion.
 
-## Running
+## Running and verification
 
-Node >=20.11; `npm start`; open http://127.0.0.1:5173. `npm test` runs engine tests; `npm run simulate` compares 200-seed investment policies. No npm install or build needed.
+Node >=20.11. `npm start` serves http://127.0.0.1:5173. No install/build step. `npm test` runs 69 tests. `npm run simulate`, `node tools/party-study.js`, `node tools/journey-study.js [seconds] [seeds]`, `node tools/equipment-study.js`, `node tools/gear-matrix.js`, and `node tools/technique-study.js` preserve deterministic bounded experiments. Experiment records 001–008 live in docs/experiments.
 
-## Playable
+## Current playable game
 
-Recruit initial guardian/ranger/cleric, assign them, enter Delve, earn XP/Gold, buy Guild upgrades, repeat. Farming targets conquered rooms; pushing extends frontier. Fourth slot unlocks through quarters. Applicants refill empty spaces every 120 seconds. Recoverable defeats stop automatic orders. Room recovery is full. Offline uses the live simulation capped at four hours. Version 1 saves are validated; corrupted existing saves are left untouched. Export/import supports backups.
+- Recruit coherent origin/class/talent combinations, compare potential at equal level, assign and reorder a party.
+- Automated one-second combat uses Guardian shields/target priority, Ranger direct attacks and bleed, Cleric lowest-health healing and infirmary-enabled cleanse. Three repeating strata and distinct Gatekeepers express regeneration, party cleave and siphoning/wounds.
+- Push the frontier or farm conquered rooms. Victory gives Gold/XP; everyone recovers after each room. Defeat stops repeat orders. Rooms terminate within 180 seconds.
+- Training, infirmary and quarters use Gold; depth 5 unlocks quarters/fourth party slot. Every ten frontier depths raises future applicant level. Empty applicant spaces refill without replacing existing choices. Relief recruitment prevents an empty bankrupt Guild from getting stuck.
+- Depth 10 unlocks two workshop patterns. Steel favors basic attacks but slows abilities; ritual strengthens ward/heal/bleed but weakens basics. One freely changeable item per adventurer between fights.
+- Depth 10 also allows six class-constrained recruit techniques with timing/strength tradeoffs. Half of new applicants retain standard abilities; existing adventurers/applicants retain theirs. Technique is immutable and chosen through recruitment. Exact Combat numbers and comparisons explain differences.
+- Live/final event timelines and eight recent expedition snapshots show entering level, equipment, technique, enemy recovery/shield absorption and individual effective damage/healing/shield/taken/cleanse contributions. Failure advice distinguishes timeouts, cleave, siphoning and a fallen front line.
+- Version 1 saves validate and migrate additive fields. Offline runs the live engine for up to four hours. Export/import backups. Bad existing saves are preserved; cross-tab changes pause old tabs to avoid overwriting progress. Encounter RNG is independent of recruitment. Snapshot purchases apply next room.
 
-Engine/content/UI in `src/engine.js`, `src/content.js`, `src/app.js`. All combat resolves in deterministic seconds. Origin constrains class; traits have visible stat effects. Rendered text is escaped. Upgrade combat snapshots apply at next room. Last report and short event ledger explain outcomes.
+## Latest evidence
 
-## Recent validation
+69 tests passed. Experiment 007 compared 7,200 equipment/composition fights and preserved asymmetric builds. Experiment 008 ran two 6,300-fight technique passes, validating every terminal save. Initially ranger variants improved nearly all sampled matchups; final lower bleed throughput retains advantages with costs. Frequent smaller heals interact poorly with steel's flat cooldown penalty; standard abilities remain valuable. Thirty one-hour journeys with the latest generation saved/reloaded at mean depths 238.5 training, 248.1 mixed, 339.3 fourth member. These samples do not prove enjoyment or universal balance.
 
-All 60 tests pass. Experiments preserve opening progression, 2,400-encounter party comparisons, 150 one-hour recovery journeys before/after RNG isolation, 60 four-hour and 15 day-long baseline journeys, and 15 day-long journeys after raising the level ceiling. Equipment study adds 2,400 encounters with validated terminal saves. Every late-session save round-trips. Twenty farming/investment recovery scenarios overcome the first wall. Browser confirmed the full loop, persistence, correct farming input, equal-level comparisons, reordering, level 2 recruits at depth 11 and cross-tab protection. Opening the second tab, buying infirmary, closing it and reloading the first preserved the newer save.
+Browser verified recruiting Quiet mending, assigning a fourth party member, ritual equipment, completed combat, named technique report, and reload persistence. Earlier checks cover the full recruit/battle/reward/invest/repeat loop, farming input, applicant levels, archive layout and cross-tab purchase preservation.
 
-## Known limitations / priorities
+## Priorities and limitations
 
-- Revised opening has longer fights; training remains stronger than health investment (experiments 001–002).
-- Three archetypes, three origins, three repeating regions. Root Gatekeepers regrow shields, Ember Gatekeepers cleave, Hollow Gatekeepers wound; infirmary rank 1 enables cleric cleanse. Depth 5 unlocks quarters, each ten frontier depths raises future applicant level; old applicants remain.
-- Full recovery between rooms limits expedition risk management. Two equipment patterns; no exploration policy or multi-party expeditions yet.
-- Reports count effective health damage, healing and absorbed shields; opening enemy shields consume attacks without being counted as health damage.
-- Browser integration checks currently manual through automation, engine tests repeatable via npm.
-- Single local browser save; cross-tab writes pause other tabs; no remote sync. Additive v1 defaults preserve old combat counters. Former level 1,000 ceiling was reached within simulated day-long play; raised to 1,000,000 while preserving accrued XP. Guild rank caps still run out of investment choices in long sessions.
+1. Study technique combinations and recruit replacement economics; current study changes one class at a time. Existing veterans may make new applicant choices unattractive despite distinct abilities.
+2. Improve individual identity/history if it supports attachment and roster decisions; name pool and career feedback are sparse.
+3. Late-game Gold has no meaningful use after finite facility ranks. Investigate an interacting Guild progression or expedition policy, without inventing disconnected currencies.
+4. Full recovery limits expedition risk management. Three archetypes/regions, no multi-party expeditions or exploration policy yet; these are opportunities, not a mandatory checklist.
+5. Browser integration checks remain manual automation; engine checks are repeatable. Local browser save only; no remote sync.
 
-Workshop at depth 10 commissions two permanent patterns for 120 Gold each. One freely changeable equipped item per adventurer between fights; Soldier's seal favors basics with slower abilities, Ritual focus boosts tagged abilities with weaker basics. Legacy saves retain progress and default to no equipment. Browser verified cost, selection and locks.
-
-Latest changes: combat owns an independent seeded RNG; live and final-room event timelines explain actions. Existing v1 fights/reports get safe defaults. Initial comparisons suggesting health was weak were qualified by experiment 003: mixed investment advances steadily and a fourth adventurer has major value.
-
-Browser checked the live timeline, expanded final report and preserved expanded state during idle updates. Experiment 005 investigated four-hour/day-long play and removed the artificial early level ceiling. Next recommended task: broaden equipment comparisons across Ember/Hollow bosses and party compositions; inspect recruitment variety and individual character histories. Equipment currently supports asymmetric specialization (experiment 006); preserve strong builds unless they eliminate alternatives. Late-game Gold sinks/agency remain unresolved after maximum Guild ranks. More extensive progression layers need evidence; do not manufacture currencies or content.
-
-Experiment 007 broadens equipment to 7,200 fights across four parties and three Gatekeepers. Retained asymmetric choices: ritual wins more near-wall fights, steel farms faster, ritual sustain can time out against Root regeneration. Reports now explain enemy recovery and survival/damage failures, with entering party snapshots and an eight-room archive. Legacy missing metadata is explicitly unrecorded. Browser verified archive layout and reload persistence. Next: improve exact ability/equipment numbers for party preparation, then examine character identity/history and late-game investment agency.
-
-Combat numbers disclosures now show equipment-adjusted attack/ability strength and cooldowns from shared engine calculations. Base attack is labeled Power. Character-keyed disclosures remain open after equipment changes. Repeated equipment study unchanged; browser verified comparisons. Next recommended task: inspect coherent character variation and histories, with late-game Gold agency still a longer-term priority.
+Do not flatten useful specializations or add breadth without evidence. Latest internal review is in DEVELOPMENT_LOG.md after the technique milestone. Next recommended task: combinations and replacement economics, then choose the next coherent improvement.

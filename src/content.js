@@ -27,3 +27,11 @@ export const EQUIPMENT = {
   steel: { name: "Soldier's seal", cost: 120, cooldown: 2, description: 'Basic physical attacks gain 35% damage. Abilities take 2 extra seconds to recharge.', modifiers: [{ trigger: 'attack', tags: ['physical'], factor: 1.35 }] },
   ritual: { name: 'Ritual focus', cost: 120, cooldown: 0, description: 'Ward, healing and bleed abilities gain 35% strength. Basic attacks deal 20% less damage.', modifiers: [{ trigger: 'ability', tags: ['ward','heal','bleed'], factor: 1.35 }, { trigger: 'attack', tags: ['physical'], factor: .8 }] },
 };
+export const TECHNIQUES = {
+  watchful: { classId:'guardian', name:'Watchful bulwark', cooldown:4, scale:1.15 },
+  steadfast: { classId:'guardian', name:'Steadfast bulwark', cooldown:8, scale:2.8 },
+  quickshot: { classId:'ranger', name:'Quick barbed shot', cooldown:3, directScale:.85, scale:.25 },
+  deepbarbs: { classId:'ranger', name:'Deep barbs', cooldown:6, directScale:.65, scale:.78 },
+  quiet: { classId:'cleric', name:'Quiet mending', cooldown:3, scale:1.4 },
+  greater: { classId:'cleric', name:'Greater mending', cooldown:7, scale:3.8 },
+};
