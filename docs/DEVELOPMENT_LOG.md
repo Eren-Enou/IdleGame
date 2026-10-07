@@ -91,3 +91,9 @@ Added recovery orders after depth 5. With automatic repeats enabled, a frontier 
 All 92 tests pass, including scheduling, victory counts, failure stops, cancellation, save validation and offline/live parity. Experiment 012 runs 240 unattended scenarios with complete save round-trips; longer recovery farms produce more XP and fewer losses in these uninvested samples. Browser used a temporary solo party to trigger frontier failure, confirmed the depth-18 queue and target lock, reloaded with the plan intact, then verified farm failure stopped orders. Restored the full party and normal farm controls; no console errors.
 
 Next: study recovery with different investments and farm-depth choices, plus long-session Guild/expedition progression. The new order strengthens idle planning while retaining preparation choices; avoid adding unrelated automation or currencies.
+
+## 2026-10-06 — Choose recovery farming depth
+
+Experiment 013 ran 180 four-hour scenarios across three recovery depths and three investment policies. Shallower farms complete more rooms; deeper farms reduce failed pushes while frontier progress remains similar. Mixed investment avoids defeat in these samples. Added 60%/80%/95% recovery preferences and exact depth previews, using the existing policy API. Queued plans freeze configuration and preserve their chosen depth; old saves default to 80%.
+
+All 96 tests pass. Repeated the study through the actual configuration API with identical results to the exploratory overrides, validating every complete save. Browser verified previews and preference persistence. No combat or price changes. Next: assess party-specific safety and longer-session capabilities, with current studies treated as evidence rather than proof of enjoyment.

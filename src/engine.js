@@ -32,7 +32,7 @@ export const hireCost = a => 25 + (a.level - 1) * 10;
 export const recruitmentCost = (s, a) => s.roster.length === 0 && s.gold < hireCost(a) ? 0 : hireCost(a);
 export const xpNeeded = a => 20 + (a.level - 1) * 12;
 export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
-  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, auto: false, recovery:{enabled:false,rooms:10,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
+  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, auto: false, recovery:{enabled:false,rooms:10,percent:80,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
   s.applicants = ['guardian', 'ranger', 'cleric'].map(c => generate(s, c));
   note(s, 'Your charter is signed. Recruit three adventurers and open the Delve.');
   return s;
@@ -133,9 +133,13 @@ export function startExpedition(s) {
 function clearRecovery(s){s.recovery.remaining=0;s.recovery.depth=0;}
 export function setPolicy(s,policy){if(!['push','farm'].includes(policy))return false;s.policy=policy;clearRecovery(s);return true;}
 export function setAuto(s,auto){if(typeof auto!=='boolean')return false;s.auto=auto;if(!auto)clearRecovery(s);return true;}
-export function configureRecovery(s,enabled,rooms=s.recovery.rooms){
-  if(typeof enabled!=='boolean'||![5,10,20].includes(rooms)||(enabled&&s.depth<5)||(enabled&&s.recovery.remaining>0&&rooms!==s.recovery.rooms))return false;
-  s.recovery.enabled=enabled;s.recovery.rooms=rooms;if(!enabled)clearRecovery(s);return true;
+export function recoveryTarget(s,percent=s.recovery.percent){
+  let depth=Math.max(1,Math.floor(s.depth*percent/100));if(depth%5===0)depth--;
+  return depth;
+}
+export function configureRecovery(s,enabled,rooms=s.recovery.rooms,percent=s.recovery.percent){
+  if(typeof enabled!=='boolean'||![5,10,20].includes(rooms)||![60,80,95].includes(percent)||(enabled&&s.depth<5)||(enabled&&s.recovery.remaining>0&&(rooms!==s.recovery.rooms||percent!==s.recovery.percent)))return false;
+  s.recovery.enabled=enabled;s.recovery.rooms=rooms;s.recovery.percent=percent;if(!enabled)clearRecovery(s);return true;
 }
 export function retreat(s) { if (!s.expedition) return false; s.expedition = null; setAuto(s,false); note(s, 'Expedition recalled safely. No rewards from the unfinished room.'); return true; }
 function hit(target, amount, pierce = false) {
@@ -184,7 +188,7 @@ function endRoom(s, win) {
     else if(--s.recovery.remaining===0){s.policy='push';s.recovery.depth=0;note(s,'Recovery farming complete. Retrying the frontier.');}
   } else if(!win){
     if(s.auto&&s.policy==='push'&&s.recovery.enabled&&s.depth>=5){
-      let depth=Math.max(1,Math.floor(s.depth*.8));if(depth%5===0)depth--;
+      const depth=recoveryTarget(s);
       s.recovery.depth=depth;s.recovery.remaining=s.recovery.rooms;s.policy='farm';s.farmDepth=depth;
       note(s,`Recovery orders: farm depth ${depth} for ${s.recovery.rooms} victories, then retry the frontier.`);
     } else setAuto(s,false);
@@ -246,9 +250,10 @@ function validateSave(s) {
   const events = list => Array.isArray(list) && list.length <= 12 && list.every(l => l && int(l.time,180) && typeof l.message === 'string' && l.message.length <= 300);
   if (!s || s.version !== VERSION || !int(s.rng,4294967295) || !int(s.nextId) || !num(s.gold) || !int(s.depth,1000000) || !num(s.savedAt,1e15) || !int(s.clock) || !int(s.applicantTimer,119) || typeof s.auto !== 'boolean' || !['push','farm'].includes(s.policy) || !int(s.farmDepth,1000000) || s.farmDepth < 1) fail();
   if(!s.upgrades) fail(); s.upgrades.mentorship ??= 0;
-  s.recovery ??= {enabled:false,rooms:10,remaining:0,depth:0};
+  s.recovery ??= {enabled:false,rooms:10,percent:80,remaining:0,depth:0};
   const recovery=s.recovery;
-  if(!recovery||typeof recovery.enabled!=='boolean'||![5,10,20].includes(recovery.rooms)||!int(recovery.remaining,recovery.rooms)||!int(recovery.depth,s.depth)||(recovery.enabled&&s.depth<5)||(recovery.remaining>0&&(!recovery.enabled||!s.auto||s.policy!=='farm'||recovery.depth<1||s.farmDepth!==recovery.depth))||(recovery.remaining===0&&recovery.depth!==0))fail();
+  if(recovery&&typeof recovery==='object'&&recovery.percent===undefined)recovery.percent=80;
+  if(!recovery||typeof recovery.enabled!=='boolean'||![60,80,95].includes(recovery.percent)||![5,10,20].includes(recovery.rooms)||!int(recovery.remaining,recovery.rooms)||!int(recovery.depth,s.depth)||(recovery.enabled&&s.depth<5)||(recovery.remaining>0&&(!recovery.enabled||!s.auto||s.policy!=='farm'||recovery.depth<1||s.farmDepth!==recovery.depth))||(recovery.remaining===0&&recovery.depth!==0))fail();
   if (Object.keys(UPGRADES).some(k => !int(s.upgrades[k], UPGRADES[k].max))) fail();
   s.equipmentUnlocked ??= [];
   if(!Array.isArray(s.equipmentUnlocked) || s.equipmentUnlocked.length>2 || new Set(s.equipmentUnlocked).size!==s.equipmentUnlocked.length || s.equipmentUnlocked.some(k=>!Object.hasOwn(EQUIPMENT,k))) fail();

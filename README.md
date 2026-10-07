@@ -30,6 +30,7 @@ node tools/recruit-study.js
 node tools/replacement-study.js
 node tools/spending-study.js
 node tools/recovery-study.js
+node tools/recovery-depth-study.js
 ```
 
 The engine has no browser dependencies. Seeded generation, one-second combat, and offline resolution use the same code. Content lives in `src/content.js`; development findings and continuation priorities live in `docs/`.
@@ -43,3 +44,5 @@ At depth 20, build the Mentorship hall to train lower-level adventurers with Gol
 Each roster card keeps a Guild record of completed-room victories, Gatekeepers, deepest victory, downings and contributions. Training does not award combat accomplishments. Older saves mark unavailable earlier history and begin recording future rooms.
 
 After depth 5, optional recovery orders farm a safer depth for 5, 10 or 20 victories after an automatic frontier defeat, then retry. A failed recovery farm stops orders. Recall, changing Orders or disabling automatic repeats cancels the queued recovery. The policy also works offline.
+
+Recovery depth can be 60%, 80% or 95% of the frontier, skipping Gatekeepers. The plan previews its current target. Shallower farms finish more rooms; deeper farms offer more XP per room. Queued recovery freezes its depth and victory count until it completes or is canceled.

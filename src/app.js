@@ -68,6 +68,9 @@ function render() {
   $('recover').checked=s.recovery.enabled;
   $('recovery-rooms').value=s.recovery.rooms;
   $('recovery-rooms').disabled=!s.recovery.enabled||s.recovery.remaining>0;
+  $('recovery-percent').value=s.recovery.percent;
+  $('recovery-percent').disabled=!s.recovery.enabled||s.recovery.remaining>0;
+  $('recovery-help').textContent=`When automatically pushing, a defeat sends the party to farm at ${s.recovery.percent}% of your deepest depth, avoiding Gatekeepers (currently depth ${E.recoveryTarget(s)}), then retry. A failed recovery farm stops automatic orders.`;
   $('auto-help').textContent=s.recovery.enabled?'Uses recovery orders after a frontier defeat.':'Stops on defeat.';
   html('recovery-status',s.recovery.remaining?`Recovering at depth ${s.recovery.depth} · ${s.recovery.remaining} victories until frontier retry.`:'');
   html('overview', `<div class="metric"><strong>${s.depth}</strong><span>DEEPEST DELVE<br>${s.depth?'Frontier established':'The unknown awaits'}</span></div><div class="metric"><strong>${s.roster.length}/${E.capacity(s)}</strong><span>ADVENTURERS<br>${s.party.length} assigned to party</span></div><div class="metric"><strong>${s.records.wins}</strong><span>ROOMS CLEARED<br>${s.records.gold.toLocaleString()} gold recovered</span></div>`);
@@ -111,6 +114,7 @@ document.addEventListener('click', event => {
 document.addEventListener('change',event=>{ if(paused || !event.target.matches('select[data-equip]')) return; if(E.equip(state,Number(event.target.dataset.equip),event.target.value||null)){save();render();} });
 $('recover').onchange = event => { E.configureRecovery(state,event.target.checked); save(); render(); };
 $('recovery-rooms').onchange = event => { E.configureRecovery(state,state.recovery.enabled,Number(event.target.value)); save(); render(); };
+$('recovery-percent').onchange = event => { E.configureRecovery(state,state.recovery.enabled,state.recovery.rooms,Number(event.target.value)); save(); render(); };
 $('start').onclick = () => { state.farmDepth = Math.max(1,Math.min(Math.max(1,state.depth), Math.floor(Number($('farm-depth').value)||1))); E.startExpedition(state); save(); render(); };
 $('retreat').onclick = () => { E.retreat(state); save(); render(); };
 $('refresh').onclick = () => { E.refreshApplicants(state); save(); render(); };
