@@ -53,7 +53,7 @@ function html(id, content) {
 function preparation(a){
   const q=E.recruitmentPreparation(state,a.id);if(!q)return '';
   const gold=n=>n.toLocaleString();
-  return `<p class="comparison"><strong>Training after hiring</strong><br>${esc(q.mentor)} can mentor this applicant to Lv ${q.target}.<br>${gold(q.hire)} hire${q.hall?` + ${gold(q.hall)} Mentorship hall`:''} + ${gold(q.training)} training = ${gold(q.total)} Gold.<br>${!q.space?'Roster is full; freeing a space changes this quote.':!q.affordable?'More Gold is needed for this first training level.':'Quoted from current Gold after hire and hall costs.'} Training is a separate choice on roster cards between fights.</p>`;
+  return `<p class="comparison"><strong>Training after hiring</strong><br>${esc(q.mentor)} can mentor this applicant to Lv ${q.target}.<br>${gold(q.hire)} hire${q.hall?` + ${gold(q.hall)} Mentorship hall`:''} + ${gold(q.training)} training = ${gold(q.total)} Gold.<br>${!q.space?'Roster is full; freeing a space changes this quote.':!q.affordable?'More Gold is needed for this first training level.':'Quoted from current Gold after hire and hall costs.'} Training is a separate choice on roster cards between fights.</p><details class="combat-numbers" data-persist="preparation-${a.id}"><summary>Combat after quoted training</summary><p>Level ${q.target} with current Guild ranks and no equipment. Equipment can be chosen after hiring.</p><p>${esc(combatDescription(state,{...a,level:q.target,equipment:null}))}</p></details>`;
 }
 function mentorshipControls(a) {
   if(!state.upgrades.mentorship) return '';

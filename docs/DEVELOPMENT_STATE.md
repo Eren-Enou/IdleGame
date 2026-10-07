@@ -1,6 +1,6 @@
 # Development state
 
-Goal remains active. Continue meaningful development under DESIGN_CONSTITUTION.md and the autonomous directive. A tested playable milestone is not completion. Historical results and decisions live in DEVELOPMENT_LOG.md and experiments 001–022; this file describes the current game and next work.
+Goal remains active. Continue meaningful development under DESIGN_CONSTITUTION.md and the autonomous directive. A tested playable milestone is not completion. Historical results and decisions live in DEVELOPMENT_LOG.md and experiments 001–023; this file describes the current game and next work.
 
 ## Running and verification
 
@@ -22,6 +22,8 @@ Node >=20.11. `npm start` serves http://127.0.0.1:5173 without dependencies or a
 - Version-1 saves migrate additive fields and validate complete state. Old in-flight enemies retain their recorded region and zero reflection defaults. Local autosave, JSON export/import and cross-tab pause protect progress. Recruitment RNG cannot alter an in-flight combat stream. Relief recruitment prevents an empty bankrupt Guild from softlocking.
 
 ## Latest evidence
+
+Experiment 023 checks 5,760 eligible recruitment routes/9,776 fights from actual mixed journeys, with controlled applicant identity and funded costs. One-hour fresh Aegis replacements win 13/30 next rooms but 1/30 through the next Gatekeeper; mentored replacements 30/30, fresh fourth Clerics 30/30. Keep technique/price balance. Added applicant combat numbers after the affordable quoted training level, explicitly current ranks/no equipment. Browser previews Lethra Thornsong at quoted 28 with 151 healing/per-ally overflow ward every 5s, cost 1,198; she remains an applicant. Current Guild stays frontier/destination 60, farm 35, auto off, Ilyra/Edric/Borin/Corin assigned, seven roster members and old plans intact.170 tests pass. Next priority supersedes older preparation notes: broader Delve variety and Guild decisions; current cost/technique questions have evidence, so avoid further arbitrary matrices without a new question.
 
 Experiment 022 preserves two 19,440-fight design studies. Single-ally overflow failed; selected party overflow with 10% healing reduction improves six fixed-gear groups against standard, loses eight, and stays conditional on unused healing. All 170 tests pass including four-hour live/offline parity. Browser naturally recruited/mentored Corin Ash (85+1,113 Gold), inspected 140 healing/per-ally ward at 1s then 5s, and completed Mirror Gatekeeper 35 with 12 healing/1,072 shield granted. Persisted after reload without errors. Next priority supersedes earlier economy work: actual unequal-level Aegis replacement/fourth-slot preparation costs and outcomes before further techniques. Human playtesting and broader Delve variety remain unverified.
 
