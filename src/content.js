@@ -10,11 +10,16 @@ export const ORIGINS = {
 };
 export const UPGRADES = {
   training: { name: 'Training yard', cost: 65, factor: 1.7, max: 20, description: 'Each rank adds 12% attack and healing to every adventurer.' },
-  infirmary: { name: 'Guild infirmary', cost: 55, factor: 1.7, max: 20, description: 'Each rank adds 15% maximum health. Parties recover fully between rooms.' },
+  infirmary: { name: 'Guild infirmary', cost: 55, factor: 1.7, max: 20, description: 'Each rank adds 15% maximum health. Rank 1 also lets Mending light cleanse one harmful status. Parties recover fully between rooms.' },
   quarters: { name: 'Expanded quarters', cost: 100, factor: 2, max: 6, description: 'Each rank makes room for two more adventurers. First rank unlocks a fourth party slot.' },
 };
 export const STRATA = [
   { name: 'The Rootways', subtitle: 'Old roots. Older debts.', enemies: ['Root rat', 'Moss crawler', 'Tunnel brigand'], hazard: 'Ordinary encounters. A guardian can protect the back line.' },
   { name: 'Ember Archive', subtitle: 'The books are still burning.', enemies: ['Ash scribe', 'Cinder moth', 'Ember sentinel'], hazard: 'Enemy attacks burn for 2 damage over each of the next 3 seconds.' },
   { name: 'Hollow Sanctum', subtitle: 'Something listens beneath the stone.', enemies: ['Hollow acolyte', 'Bone warden', 'Pale watcher'], hazard: 'Enemies siphon health on attacks. Sustained damage matters here.' },
+];
+export const GATEKEEPERS = [
+  { name: 'Rootbound Gatekeeper', effect: 'shield', scale: .08, description: 'Every third attack, regrows a shield worth 8% of maximum health. Sustained damage breaks through.' },
+  { name: 'Cinder Librarian', effect: 'cleave', scale: .55, description: 'Every third attack, lashes the entire party for 55% attack damage. A guardian cannot intercept it; healers and health help.' },
+  { name: 'The Hollow Prior', effect: 'bleed', scale: .12, description: 'Every third attack, wounds the front line for 4 seconds. Infirmary rank 1 lets Mending light cleanse one harmful status.' },
 ];

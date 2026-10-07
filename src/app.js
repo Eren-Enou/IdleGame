@@ -1,5 +1,5 @@
 import * as E from './engine.js';
-import { CLASSES, ORIGINS, UPGRADES } from './content.js';
+import { CLASSES, ORIGINS, UPGRADES, GATEKEEPERS } from './content.js';
 const $ = id => document.getElementById(id);
 const key = 'idle-fodder-v1';
 const esc = x => String(x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -27,10 +27,10 @@ function render() {
   $('depth-mark').textContent = `DEPTH ${String(targetDepth).padStart(3,'0')}`;
   $('enemy-symbol').textContent = e?.enemy.boss ? '♛' : '♜';
   html('enemy', e ? `<strong>${esc(e.enemy.name)}</strong>${bar(e.enemy.hp,e.enemy.maxHp,'enemy-bar')}<small>${e.enemy.hp}/${e.enemy.maxHp} HP${e.enemy.shield?` · ${e.enemy.shield} shield`:''}${e.enemy.status.length?' · bleeding':''}</small>` : '<span>A passage into the unknown.</span>');
-  html('region', `<h3>${region.name}</h3><p>${region.subtitle}<br>${region.hazard}${targetDepth%5===0?' <strong>Gatekeeper ahead: more health, armor, and an opening shield.</strong>':''}</p>`);
+  html('region', `<h3>${region.name}</h3><p>${region.subtitle}<br>${region.hazard}${targetDepth%5===0?' <strong>Gatekeeper ahead:</strong> ${GATEKEEPERS[Math.floor((targetDepth-1)/10)%3].description}':''}</p>`);
   $('policy').value = s.policy; $('farm-depth').max = Math.max(1,s.depth); $('farm-depth').disabled = s.policy !== 'farm'; $('auto').checked = s.auto;
   $('start').disabled = !!e || !s.party.length; $('retreat').disabled = !e;
-  html('battle-party', e ? e.units.map(u => { const a = s.roster.find(a=>a.id===u.id); return `<div class="battle-unit"><strong>${esc(a.name)}</strong> · ${CLASSES[a.classId].name}${bar(u.hp,u.maxHp)}<small>${u.hp}/${u.maxHp} HP · ${u.shield} shield · ${u.damage} damage · ${u.healing} healing${u.hp<=0?' · downed':''}</small></div>`; }).join('') : `<p>${s.party.length?'Party ready. Each completed room grants gold and XP, then the party recovers fully.':'Recruit adventurers below, assign them to a party, then enter the Delve.'}</p>`);
+  html('battle-party', e ? e.units.map(u => { const a = s.roster.find(a=>a.id===u.id); return `<div class="battle-unit"><strong>${esc(a.name)}</strong> · ${CLASSES[a.classId].name}${bar(u.hp,u.maxHp)}<small>${u.hp}/${u.maxHp} HP · ${u.shield} shield · ${u.damage} damage · ${u.healing} healing${u.status.length?` · ${u.status.map(x=>x.type).join(", ")}`:""}${u.hp<=0?' · downed':''}</small></div>`; }).join('') : `<p>${s.party.length?'Party ready. Each completed room grants gold and XP, then the party recovers fully.':'Recruit adventurers below, assign them to a party, then enter the Delve.'}</p>`);
   $('party-count').textContent = `${s.party.length}/${E.partySlots(s)} party slots`;
   html('roster-cards', s.roster.map(a=>character(a)).join('') || '<div class="empty">Your guildhall is quiet. Three applicants await at the door.<br>Start with a guardian, a ranger, and a cleric.</div>');
   html('applicant-cards', s.applicants.map(a=>character(a,true)).join('') || '<div class="empty">All applicants recruited. Empty spaces refill automatically.</div>');
@@ -38,7 +38,7 @@ function render() {
   $('refresh').disabled = s.gold < 10;
   html('upgrades', Object.entries(UPGRADES).map(([k,u])=>`<article class="card upgrade"><div class="rank">RANK ${s.upgrades[k]} / ${u.max}</div><h3>${u.name}</h3><p>${u.description}</p><button data-action="upgrade" data-key="${k}" ${s.gold<E.upgradeCost(s,k)||s.upgrades[k]>=u.max?'disabled':''}>${s.upgrades[k]>=u.max?'Fully developed':`Improve · ${E.upgradeCost(s,k).toLocaleString()} gold`}</button></article>`).join(''));
   const r = s.lastReport;
-  html('report', r ? `<strong>Last expedition · Depth ${r.depth}</strong> — ${esc(r.reason)} · ${r.seconds}s · +${r.reward} gold<div class="report-row">${r.units.map(u=>`<span>${esc(s.roster.find(a=>a.id===u.id)?.name||'Former adventurer')}: ${u.damage} damage / ${u.healing} healing / ${u.blocked ?? 0} shield absorbed${u.survived?'':' / downed'}</span>`).join('')}</div>` : '');
+  html('report', r ? `<strong>Last expedition · Depth ${r.depth}</strong> — ${esc(r.reason)} · ${r.seconds}s · +${r.reward} gold${r.win?"":"<p>Try farming a conquered room for XP and gold, then adjust the party or invest in the Guild. No adventurers were lost.</p>"}<div class="report-row">${r.units.map(u=>`<span>${esc(s.roster.find(a=>a.id===u.id)?.name||'Former adventurer')}: ${u.damage} damage / ${u.healing} healing / ${u.blocked ?? 0} shield absorbed / ${u.cleansed ?? 0} cleansed${u.survived?'':' / downed'}</span>`).join('')}</div>` : '');
   html('log', s.log.slice(0,7).map(l=>`<li><small>${Math.floor(l.time/60)}:${String(l.time%60).padStart(2,'0')}</small>${esc(l.message)}</li>`).join(''));
 }
 document.addEventListener('click', event => {

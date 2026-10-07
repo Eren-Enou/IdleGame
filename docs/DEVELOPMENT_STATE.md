@@ -14,15 +14,15 @@ Engine/content/UI in `src/engine.js`, `src/content.js`, `src/app.js`. All combat
 
 ## Recent validation
 
-All 21 engine tests and 600 baseline simulation runs passed. Browser confirmed recruitment, assignment, combat, rewards, upgrade rank changes, fourth slot, and persistence. Recovery/report regressions passed; corrected farm-depth browser input entered the intended depth 5.
+All 28 engine tests pass. Experiments preserve 600-run baseline/revised progression and 2,400-encounter party comparisons. Twenty farming/investment recovery scenarios overcome the first wall. Browser confirmed recruitment, assignment, combat, rewards, upgrade rank changes, fourth slot, and persistence. Recovery/report regressions passed; corrected farm-depth browser input entered the intended depth 5.
 
 ## Known limitations / priorities
 
-- Fast opening; training far stronger than health investment (experiment 001).
-- Only three archetypes, three origins and three repeating regions. Gatekeepers currently have stronger stats/shield, not distinct tactics.
+- Revised opening has longer fights; training remains stronger than health investment (experiments 001–002).
+- Three archetypes, three origins, three repeating regions. Root Gatekeepers regrow shields, Ember Gatekeepers cleave, Hollow Gatekeepers wound; infirmary rank 1 enables cleric cleanse.
 - Full recovery between rooms limits expedition risk management. No equipment, exploration policy, or multi-party expeditions yet.
 - Reports count effective health damage, healing and absorbed shields; opening enemy shields consume attacks without being counted as health damage.
 - Browser integration checks currently manual through automation, engine tests repeatable via npm.
 - Single local browser save; no remote sync. No save migration beyond additive version 1 defaults yet.
 
-Next recommended task: evaluate opening pacing and party composition with seeded simulations. Changes should deepen preparation and outcome clarity before adding content.
+Next recommended task: verify the new boss UI in browser, then inspect balanced-budget party performance across power levels. Clarify recruitment comparisons and party preparation before adding content.

@@ -1,4 +1,4 @@
-import { CLASSES, ORIGINS, UPGRADES, STRATA } from './content.js';
+import { CLASSES, ORIGINS, UPGRADES, STRATA, GATEKEEPERS } from './content.js';
 export const VERSION = 1;
 export const MAX_OFFLINE = 4 * 60 * 60;
 export function random(s) { s.rng = (Math.imul(s.rng, 1664525) + 1013904223) >>> 0; return s.rng / 4294967296; }
@@ -54,13 +54,13 @@ export function stratum(depth) { return STRATA[Math.floor((depth - 1) / 10) % ST
 export function makeEnemy(depth) {
   const boss = depth % 5 === 0, region = Math.floor((depth - 1) / 10) % 3;
   const scale = (1 + depth * .18) * (1 + Math.floor(depth / 30) * .25);
-  const hp = Math.round(50 * scale * (boss ? 2.3 : 1));
-  return { name: boss ? ['Rootbound Gatekeeper', 'Cinder Librarian', 'The Hollow Prior'][region] : stratum(depth).enemies[(depth - 1) % 3], hp, maxHp: hp, attack: Math.round((5 + depth * 1.5) * (boss ? 1.35 : 1)), armor: boss ? 3 : 0, cooldown: 2, status: [], shield: boss ? Math.round(hp * .15) : 0, boss, region };
+  const hp = Math.round(70 * scale * (boss ? 2.3 : 1));
+  return { name: boss ? GATEKEEPERS[region].name : stratum(depth).enemies[(depth - 1) % 3], hp, maxHp: hp, attack: Math.round((5 + depth * 1.5) * (boss ? 1.35 : 1)), armor: boss ? 3 : 0, cooldown: 2, status: [], shield: boss ? Math.round(hp * .15) : 0, boss, region };
 }
 export function startExpedition(s) {
   if (s.expedition || !s.party.length) return false;
   const depth = s.policy === 'farm' ? Math.min(s.farmDepth, Math.max(1, s.depth)) : s.depth + 1;
-  s.expedition = { depth, elapsed: 0, seed: s.rng, enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, ...t, maxHp: t.hp, shield: 0, cooldown: 1, abilityCooldown: 2, status: [], damage: 0, healing: 0, blocked: 0 }; }) };
+  s.expedition = { depth, elapsed: 0, seed: s.rng, enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, ...t, maxHp: t.hp, shield: 0, cooldown: 1, abilityCooldown: CLASSES[a.classId].ability.cooldown, status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
   return true;
 }
 export function retreat(s) { if (!s.expedition) return false; s.expedition = null; s.auto = false; note(s, 'Expedition recalled safely. No rewards from the unfinished room.'); return true; }
@@ -85,7 +85,7 @@ function endRoom(s, win) {
     }
   } else { s.records.defeats++; s.auto = false; }
   const reason = win ? 'Victory' : e.elapsed >= 180 ? 'Stalemate: recalled after 180 seconds' : 'Defeat: the party was overwhelmed';
-  s.lastReport = { depth: e.depth, win, reward, seconds: e.elapsed, reason, units: e.units.map(u => ({ id: u.id, damage: u.damage, healing: u.healing, blocked: u.blocked, survived: u.hp > 0 })) };
+  s.lastReport = { depth: e.depth, win, reward, seconds: e.elapsed, reason, units: e.units.map(u => ({ id: u.id, damage: u.damage, healing: u.healing, blocked: u.blocked, cleansed: u.cleansed, survived: u.hp > 0 })) };
   note(s, `${reason} at depth ${e.depth}. ${win ? `+${reward} gold. Party recovered.` : 'Everyone returned safely. Try training, a healer, or a shallower farm.'}`);
   s.expedition = null;
 }
@@ -99,10 +99,10 @@ export function tick(s) {
     const a = s.roster.find(a => a.id === u.id), c = CLASSES[a.classId];
     if (--u.abilityCooldown <= 0) {
       const ability = c.ability; u.abilityCooldown = ability.cooldown;
-      if (ability.effect === 'shield') u.shield = Math.min(u.maxHp * .6, u.shield + Math.round(u.attack * ability.scale));
+      if (ability.effect === 'shield') u.shield = Math.min(Math.round(u.maxHp * .6), u.shield + Math.round(u.attack * ability.scale));
       if (ability.effect === 'heal') {
         const target = e.units.filter(x => x.hp > 0).sort((a,b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-        if (target) { const healing = Math.min(target.maxHp - target.hp, Math.round(u.attack * ability.scale)); target.hp += healing; u.healing += healing; }
+        if (target) { const healing = Math.min(target.maxHp - target.hp, Math.round(u.attack * ability.scale)); target.hp += healing; u.healing += healing; if (u.cleanse && target.status.length) { target.status.shift(); u.cleansed++; } }
       }
       if (ability.effect === 'bleed') { u.damage += hit(e.enemy, u.attack); e.enemy.status.push({ type: 'bleed', source: u.id, power: Math.round(u.attack * ability.scale), remaining: 4 }); }
     }
@@ -117,6 +117,12 @@ export function tick(s) {
     const damage = hit(target, e.enemy.attack);
     if (e.enemy.region === 1) target.status.push({ type: 'burn', power: 2, remaining: 3 });
     if (e.enemy.region === 2) e.enemy.hp = Math.min(e.enemy.maxHp, e.enemy.hp + Math.round(damage * .3));
+    if (e.enemy.boss && e.elapsed % 6 === 0) {
+      const ability = GATEKEEPERS[e.enemy.region];
+      if (ability.effect === 'shield') e.enemy.shield = Math.min(Math.round(e.enemy.maxHp * .3), e.enemy.shield + Math.round(e.enemy.maxHp * ability.scale));
+      if (ability.effect === 'cleave') for (const u of e.units.filter(u => u.hp > 0)) hit(u, e.enemy.attack * ability.scale);
+      if (ability.effect === 'bleed') target.status.push({ type: 'bleed', power: Math.round(e.enemy.attack * ability.scale), remaining: 4 });
+    }
   }
   if (e.units.every(u => u.hp <= 0) || e.elapsed >= 180) endRoom(s, false);
 }
@@ -145,7 +151,7 @@ function validateSave(s) {
   if (s.lastReport !== null) {
     const r = s.lastReport;
     if (!r || !int(r.depth,1000000) || !num(r.reward) || !int(r.seconds,180) || typeof r.win !== 'boolean' || typeof r.reason !== 'string' || r.reason.length > 100 || !Array.isArray(r.units) || r.units.length > 4 || r.units.some(u => !u || !int(u.id) || !num(u.damage) || !num(u.healing) || typeof u.survived !== 'boolean')) fail();
-    for (const u of r.units) { u.blocked ??= 0; if (!num(u.blocked)) fail(); }
+    for (const u of r.units) { u.blocked ??= 0; u.cleansed ??= 0; if (!num(u.blocked) || !int(u.cleansed)) fail(); }
   }
   if (s.expedition !== null) {
     const e = s.expedition;
@@ -153,7 +159,7 @@ function validateSave(s) {
     for (const u of [...e.units, e.enemy]) {
       if (!u || ['hp','maxHp','attack','armor','shield','cooldown'].some(k => !num(u[k])) || u.maxHp <= 0 || u.hp > u.maxHp || !Array.isArray(u.status) || u.status.length > 100 || u.status.some(x => !x || !['burn','bleed'].includes(x.type) || !num(x.power) || !int(x.remaining,4))) fail();
     }
-    for (const u of e.units) { u.blocked ??= 0; if (!s.party.includes(u.id) || !int(u.speed,10) || u.speed < 1 || !num(u.abilityCooldown,10) || !num(u.damage) || !num(u.healing) || !num(u.blocked)) fail(); }
+    for (const u of e.units) { u.blocked ??= 0; u.cleansed ??= 0; u.cleanse ??= s.upgrades.infirmary > 0; if (!s.party.includes(u.id) || !int(u.speed,10) || u.speed < 1 || !num(u.abilityCooldown,10) || !num(u.damage) || !num(u.healing) || !num(u.blocked) || !int(u.cleansed) || typeof u.cleanse !== 'boolean') fail(); }
     if (typeof e.enemy.name !== 'string' || e.enemy.name.length > 80 || typeof e.enemy.boss !== 'boolean' || !int(e.enemy.region,2)) fail();
   }
 }
