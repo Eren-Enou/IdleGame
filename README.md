@@ -31,6 +31,7 @@ node tools/replacement-study.js
 node tools/spending-study.js
 node tools/recovery-study.js
 node tools/recovery-depth-study.js
+node tools/veteran-study.js 20
 ```
 
 The engine has no browser dependencies. Seeded generation, one-second combat, and offline resolution use the same code. Content lives in `src/content.js`; development findings and continuation priorities live in `docs/`.

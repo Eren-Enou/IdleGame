@@ -4,7 +4,7 @@ Goal remains active. Continue meaningful development under DESIGN_CONSTITUTION.m
 
 ## Running and verification
 
-Node >=20.11. `npm start` serves http://127.0.0.1:5173. No install/build step. `npm test` runs 104 tests. `npm run simulate`, `node tools/party-study.js`, `node tools/journey-study.js [seconds] [seeds]`, `node tools/equipment-study.js`, `node tools/gear-matrix.js`, and `node tools/technique-study.js`, and `node tools/recruit-study.js` preserve deterministic bounded experiments. Experiment records 001–013 live in docs/experiments.
+Node >=20.11. `npm start` serves http://127.0.0.1:5173. No install/build step. `npm test` runs 104 tests. `npm run simulate`, `node tools/party-study.js`, `node tools/journey-study.js [seconds] [seeds]`, `node tools/equipment-study.js`, `node tools/gear-matrix.js`, and `node tools/technique-study.js`, and `node tools/recruit-study.js` preserve deterministic bounded experiments. Experiment records 001–014 live in docs/experiments.
 
 ## Current playable game
 
@@ -31,7 +31,7 @@ Browser verified the depth-20 mentorship unlock, 450-Gold hall and 47-Gold catch
 4. Full recovery limits expedition risk management. Three archetypes/regions, no multi-party expeditions or exploration policy yet; these are opportunities, not a mandatory checklist.
 5. Browser integration checks remain manual automation; engine checks are repeatable. Local browser save only; no remote sync.
 
-Do not flatten useful specializations or add breadth without evidence. Latest internal review is in DEVELOPMENT_LOG.md after saved party plans. Next recommended task: investigate long-session Guild capabilities and character identity, using existing replacement and recovery studies before adding breadth.
+Do not flatten useful specializations or add breadth without evidence. Latest internal review is in DEVELOPMENT_LOG.md after saved party plans. Next recommended task: add and study a distinct Delve challenge after the three-region opening. Experiment 014 shows repeated content well before combat-facility caps; keep current numeric caps for now.
 
 Experiment 009 compares 12,150 technique combinations and 30 recruitment journeys. Fresh recruit power falls to about 31% of veterans after an hour. Added a depth-20 Mentorship hall (450 Gold), with exact one-level/affordable catch-up quotes on roster cards. Training consumes Gold, respects remaining XP and caps at the highest roster level; it locks during combat and retains identity/equipment. Available one-hour savings bring recruits to about 87% veteran power, with facility/hire costs paid. Next: evaluate actual replacement fights and longer Gold agency, alongside character history/identity.
 
@@ -42,3 +42,5 @@ Experiments 011–012 compare 720 spending fights and 240 unattended recovery sc
 Experiment 013 ran 180 four-hour depth/investment scenarios. Recovery now supports 60%/80%/95% frontier depth with previews; 80% remains default, older queued plans retain their target. Active configuration locks and normal cancellation remain. Browser verified previews and save persistence. All 104 tests pass. Next: party-specific recovery safety and longer-session capabilities; mixed investment avoided defeat in the latest sample, so not every party needs recovery.
 
 Saved party plans unlock at depth 5. Three named slots snapshot member IDs, order and equipment; applying uses current progression and is atomic. Dismissed members retain a named unavailable warning rather than silently shrinking a lineup. Saves migrate older games to empty slots. Browser verified four- and three-member alternatives, equipment restoration, combat locks and reload persistence with no console errors. All 104 tests pass. Plans are manual preparation convenience, not simultaneous parties or automated switching.
+
+Experiment 014 runs 60 continuous 24-hour journeys and validates 240 save checkpoints. Four-member parties cap Training/Infirmary around 16–17h, but repeat the three-region cycle eleven times by 1h. Three-member parties have not capped both at 24h. Prioritize new mechanical Delve discovery before raising numeric facility caps. New region experiments must compare compositions/equipment and rerun progression regressions. The simulated purchase policy assumes continuous active investment, not automated in-game purchases or a 24h offline absence.
