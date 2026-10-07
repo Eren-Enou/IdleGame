@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as E from '../src/engine.js';
+import { compareRecruit,partyAdvice } from '../src/presentation.js';
+test('recruit comparison isolates potential from accumulated experience',()=>{const s=E.createGame(1,0), a=s.applicants[1];const peer={...a,id:99,level:10};s.roster=[peer];const c=compareRecruit(s,a);assert.equal(c.level,10);assert.deepEqual(c.delta,{hp:0,attack:0,armor:0});assert.equal(a.level,1);assert.equal(peer.level,10);});
+test('recruit comparison prefers assigned same-class peer',()=>{const s=E.createGame(1,0),a=s.applicants[1];s.roster=[{...a,id:98},{...a,id:99}];s.party=[99];assert.equal(compareRecruit(s,a).peer.id,99);});
+test('new role is identified without inventing a comparison',()=>{const s=E.createGame(1,0);assert.equal(compareRecruit(s,s.applicants[1]).peer,null);assert.equal(compareRecruit(s,s.applicants[1]).role,'Damage');});
+test('party advice follows guardian priority and reports missing healer',()=>{const s=E.createGame(1,0);for(const a of [...s.applicants])E.recruit(s,a.id);s.party=[s.roster[1].id,s.roster[0].id];assert.ok(partyAdvice(s).startsWith(s.roster[0].name));assert.match(partyAdvice(s),/No healer/);});
+test('reorder changes target priority within roles and locks in combat',()=>{const s=E.createGame(1,0);for(const a of [...s.applicants])E.recruit(s,a.id);s.party=[s.roster[1].id,s.roster[2].id];assert.ok(E.reorder(s,s.party[1],-1));assert.match(partyAdvice(s),new RegExp('^'+s.roster[2].name));E.startExpedition(s);assert.equal(E.reorder(s,s.party[0],1),false);});
+test('invalid reorder cannot insert or duplicate an adventurer',()=>{const s=E.createGame(1,0);s.roster=[s.applicants[0]];s.party=[s.roster[0].id];const before=[...s.party];assert.equal(E.reorder(s,999,1),false);assert.equal(E.reorder(s,s.party[0],-1),false);assert.equal(E.reorder(s,s.party[0],2),false);assert.deepEqual(s.party,before);});

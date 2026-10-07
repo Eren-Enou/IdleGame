@@ -5,9 +5,10 @@ export function random(s) { s.rng = (Math.imul(s.rng, 1664525) + 1013904223) >>>
 const pick = (s, a) => a[Math.floor(random(s) * a.length)];
 const names = { Dwarf: ['Brin', 'Orra', 'Thorek', 'Dagna', 'Borin'], Elf: ['Ilyra', 'Thalen', 'Syl', 'Aerin', 'Veya'], Human: ['Mara', 'Edric', 'Nell', 'Rowan', 'Tamsin'] };
 export function generate(s, forcedClass) {
+  if (forcedClass && !Object.hasOwn(CLASSES,forcedClass)) throw new Error('Unknown adventurer class.');
   const origin = pick(s, Object.keys(ORIGINS).filter(k => !forcedClass || ORIGINS[k].classes.includes(forcedClass)));
   const o = ORIGINS[origin], classId = forcedClass || pick(s, o.classes);
-  return { id: s.nextId++, name: pick(s, names[o.species]), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: 1, xp: 0 };
+  return { id: s.nextId++, name: pick(s, names[o.species]), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(1000,1 + Math.floor(s.depth / 10)), xp: 0 };
 }
 export function stats(s, a) {
   const c = CLASSES[a.classId], o = ORIGINS[a.origin], growth = 1 + (a.level - 1) * .12;
@@ -42,8 +43,15 @@ export function dismiss(s, id) {
   if (s.expedition || !s.roster.some(a => a.id === id)) return false;
   s.party = s.party.filter(x => x !== id); s.roster = s.roster.filter(a => a.id !== id); return true;
 }
+export function reorder(s, id, direction) {
+  if (s.expedition || ![-1,1].includes(direction)) return false;
+  const index = s.party.indexOf(id), next = index + direction;
+  if (index < 0 || next < 0 || next >= s.party.length) return false;
+  [s.party[index],s.party[next]] = [s.party[next],s.party[index]];
+  return true;
+}
 export function buyUpgrade(s, key) {
-  if (!UPGRADES[key] || s.upgrades[key] >= UPGRADES[key].max || s.gold < upgradeCost(s, key)) return false;
+  if (!Object.hasOwn(UPGRADES,key) || s.depth < (UPGRADES[key].unlockDepth || 0) || s.upgrades[key] >= UPGRADES[key].max || s.gold < upgradeCost(s, key)) return false;
   s.gold -= upgradeCost(s, key); s.upgrades[key]++; note(s, `${UPGRADES[key].name} improved to rank ${s.upgrades[key]}.`); return true;
 }
 export function refreshApplicants(s) {
@@ -78,7 +86,10 @@ function endRoom(s, win) {
   const e = s.expedition, reward = win ? Math.round((12 + e.depth * 3) * (e.enemy.boss ? 1.8 : 1)) : 0;
   s.gold = Math.min(1e12, s.gold + reward); s.records.gold = Math.min(1e12, s.records.gold + reward);
   if (win) {
+    const oldDepth = s.depth;
     s.depth = Math.max(s.depth, e.depth); s.records.wins++;
+    if (oldDepth < 5 && s.depth >= 5) note(s,'The first Gatekeeper falls. Expanded quarters can now unlock a fourth party slot.');
+    if (Math.floor(oldDepth / 10) < Math.floor(s.depth / 10)) note(s,`Word of your Guild spreads. New applicants now arrive at level ${Math.min(1000,1+Math.floor(s.depth/10))}. Existing applicants stay available.`);
     for (const u of e.units) {
       const a = s.roster.find(a => a.id === u.id); a.xp += 8 + e.depth * 2;
       while (a.xp >= xpNeeded(a) && a.level < 1000) { a.xp -= xpNeeded(a); a.level++; }

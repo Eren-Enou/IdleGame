@@ -9,10 +9,11 @@ const parties = {
 };
 const seeds=100, rows=[];
 for(const depth of [5,15,25,35]) for(const [name,classes] of Object.entries(parties)) {
- let wins=0,time=0,health=0;
+ let wins=0,time=0;
  for(let seed=1;seed<=seeds;seed++) {
   const s=E.createGame(seed,0);s.roster=classes.map(c=>E.generate(s,c));s.roster.forEach(a=>a.level=8);s.party=s.roster.map(a=>a.id);s.depth=depth-1;s.upgrades.training=2;s.upgrades.infirmary=2;
-  E.startExpedition(s); while(s.expedition){health=s.expedition.units.reduce((n,u)=>n+u.hp,0);E.tick(s);}
+  E.startExpedition(s); for(let i=0;s.expedition&&i<181;i++) E.tick(s);
+  if(s.expedition) throw new Error(`Encounter did not terminate: seed ${seed}, depth ${depth}`);
   wins+=Number(s.lastReport.win);time+=s.lastReport.seconds;
  }
  rows.push({depth,party:name,winPercent:wins,meanSeconds:Math.round(time/seeds*10)/10});

@@ -1,5 +1,5 @@
 {
   "name": "idle-fodder", "version": "0.1.0", "private": true, "type": "module",
   "scripts": { "start": "node tools/server.js", "test": "node --test", "simulate": "node tools/simulate.js" },
-  "engines": { "node": ">=20" }
+  "engines": { "node": ">=20.11" }
 }

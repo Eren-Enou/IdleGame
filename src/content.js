@@ -11,7 +11,7 @@ export const ORIGINS = {
 export const UPGRADES = {
   training: { name: 'Training yard', cost: 65, factor: 1.7, max: 20, description: 'Each rank adds 12% attack and healing to every adventurer.' },
   infirmary: { name: 'Guild infirmary', cost: 55, factor: 1.7, max: 20, description: 'Each rank adds 15% maximum health. Rank 1 also lets Mending light cleanse one harmful status. Parties recover fully between rooms.' },
-  quarters: { name: 'Expanded quarters', cost: 100, factor: 2, max: 6, description: 'Each rank makes room for two more adventurers. First rank unlocks a fourth party slot.' },
+  quarters: { name: 'Expanded quarters', cost: 100, factor: 2, max: 6, unlockDepth: 5, description: 'Clear depth 5 to unlock. Each rank makes room for two more adventurers. First rank unlocks a fourth party slot.' },
 };
 export const STRATA = [
   { name: 'The Rootways', subtitle: 'Old roots. Older debts.', enemies: ['Root rat', 'Moss crawler', 'Tunnel brigand'], hazard: 'Ordinary encounters. A guardian can protect the back line.' },

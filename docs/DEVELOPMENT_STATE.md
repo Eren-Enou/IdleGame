@@ -14,15 +14,15 @@ Engine/content/UI in `src/engine.js`, `src/content.js`, `src/app.js`. All combat
 
 ## Recent validation
 
-All 28 engine tests pass. Experiments preserve 600-run baseline/revised progression and 2,400-encounter party comparisons. Twenty farming/investment recovery scenarios overcome the first wall. Browser confirmed recruitment, assignment, combat, rewards, upgrade rank changes, fourth slot, and persistence. Recovery/report regressions passed; corrected farm-depth browser input entered the intended depth 5.
+All 36 tests pass. Experiments preserve 600-run baseline/revised progression and 2,400-encounter party comparisons. Twenty farming/investment recovery scenarios overcome the first wall. Browser confirmed the full loop, persistence, correct farming input, equal-level comparisons, reordering and cross-tab protection. Opening the second tab, buying infirmary, closing it and reloading the first preserved the newer save.
 
 ## Known limitations / priorities
 
 - Revised opening has longer fights; training remains stronger than health investment (experiments 001–002).
-- Three archetypes, three origins, three repeating regions. Root Gatekeepers regrow shields, Ember Gatekeepers cleave, Hollow Gatekeepers wound; infirmary rank 1 enables cleric cleanse.
+- Three archetypes, three origins, three repeating regions. Root Gatekeepers regrow shields, Ember Gatekeepers cleave, Hollow Gatekeepers wound; infirmary rank 1 enables cleric cleanse. Depth 5 unlocks quarters, each ten frontier depths raises future applicant level; old applicants remain.
 - Full recovery between rooms limits expedition risk management. No equipment, exploration policy, or multi-party expeditions yet.
 - Reports count effective health damage, healing and absorbed shields; opening enemy shields consume attacks without being counted as health damage.
 - Browser integration checks currently manual through automation, engine tests repeatable via npm.
-- Single local browser save; no remote sync. No save migration beyond additive version 1 defaults yet.
+- Single local browser save; cross-tab writes pause other tabs; no remote sync. Additive v1 defaults preserve old combat counters. Level cap 1,000 and Guild rank caps are numerical safety limits; an eventual interacting progression layer will be needed for much longer play.
 
-Next recommended task: verify the new boss UI in browser, then inspect balanced-budget party performance across power levels. Clarify recruitment comparisons and party preparation before adding content.
+Next recommended task: run mixed-investment/deeper recovery studies and inspect battle explanations. Maintain coherent mechanics; do not add classes or currencies just to extend development. Browser verified frontier depth 11 yields new level 2 applicants at 35 gold while preserving existing recruits.
