@@ -14,7 +14,7 @@ Engine/content/UI in `src/engine.js`, `src/content.js`, `src/app.js`. All combat
 
 ## Recent validation
 
-All 40 tests pass. Experiments preserve opening progression, 2,400-encounter party comparisons, and 150 one-hour recovery journeys before/after RNG isolation. Every late-session save round-trips. Twenty farming/investment recovery scenarios overcome the first wall. Browser confirmed the full loop, persistence, correct farming input, equal-level comparisons, reordering, level 2 recruits at depth 11 and cross-tab protection. Opening the second tab, buying infirmary, closing it and reloading the first preserved the newer save.
+All 42 tests pass. Experiments preserve opening progression, 2,400-encounter party comparisons, 150 one-hour recovery journeys before/after RNG isolation, 60 four-hour and 15 day-long baseline journeys, and 15 day-long journeys after raising the level ceiling. Every late-session save round-trips. Twenty farming/investment recovery scenarios overcome the first wall. Browser confirmed the full loop, persistence, correct farming input, equal-level comparisons, reordering, level 2 recruits at depth 11 and cross-tab protection. Opening the second tab, buying infirmary, closing it and reloading the first preserved the newer save.
 
 ## Known limitations / priorities
 
@@ -23,8 +23,8 @@ All 40 tests pass. Experiments preserve opening progression, 2,400-encounter par
 - Full recovery between rooms limits expedition risk management. No equipment, exploration policy, or multi-party expeditions yet.
 - Reports count effective health damage, healing and absorbed shields; opening enemy shields consume attacks without being counted as health damage.
 - Browser integration checks currently manual through automation, engine tests repeatable via npm.
-- Single local browser save; cross-tab writes pause other tabs; no remote sync. Additive v1 defaults preserve old combat counters. Level cap 1,000 and Guild rank caps are numerical safety limits; an eventual interacting progression layer will be needed for much longer play.
+- Single local browser save; cross-tab writes pause other tabs; no remote sync. Additive v1 defaults preserve old combat counters. Former level 1,000 ceiling was reached within simulated day-long play; raised to 1,000,000 while preserving accrued XP. Guild rank caps still run out of investment choices in long sessions.
 
 Latest changes: combat owns an independent seeded RNG; live and final-room event timelines explain actions. Existing v1 fights/reports get safe defaults. Initial comparisons suggesting health was weak were qualified by experiment 003: mixed investment advances steadily and a fourth adventurer has major value.
 
-Browser checked the live timeline, expanded final report and preserved expanded state during idle updates. Next recommended task: investigate multi-hour progression and practical caps. Maintain coherent mechanics; do not add classes or currencies just to extend development.
+Browser checked the live timeline, expanded final report and preserved expanded state during idle updates. Experiment 005 investigated four-hour/day-long play and removed the artificial early level ceiling. Next recommended task: prototype a small equipment system with basic-attack versus tagged-ability/cooldown tradeoffs; run party-composition studies before accepting it. This should add preparation choices with existing Gold and combat primitives, without a new currency or prestige rewrite. More extensive progression layers require evidence beyond this first equipment experiment.

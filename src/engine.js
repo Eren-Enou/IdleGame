@@ -1,6 +1,7 @@
 import { CLASSES, ORIGINS, UPGRADES, STRATA, GATEKEEPERS } from './content.js';
 export const VERSION = 1;
 export const MAX_OFFLINE = 4 * 60 * 60;
+export const MAX_LEVEL = 1000000;
 export function random(s) { s.rng = (Math.imul(s.rng, 1664525) + 1013904223) >>> 0; return s.rng / 4294967296; }
 const pick = (s, a) => a[Math.floor(random(s) * a.length)];
 const names = { Dwarf: ['Brin', 'Orra', 'Thorek', 'Dagna', 'Borin'], Elf: ['Ilyra', 'Thalen', 'Syl', 'Aerin', 'Veya'], Human: ['Mara', 'Edric', 'Nell', 'Rowan', 'Tamsin'] };
@@ -8,7 +9,7 @@ export function generate(s, forcedClass) {
   if (forcedClass && !Object.hasOwn(CLASSES,forcedClass)) throw new Error('Unknown adventurer class.');
   const origin = pick(s, Object.keys(ORIGINS).filter(k => !forcedClass || ORIGINS[k].classes.includes(forcedClass)));
   const o = ORIGINS[origin], classId = forcedClass || pick(s, o.classes);
-  return { id: s.nextId++, name: pick(s, names[o.species]), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(1000,1 + Math.floor(s.depth / 10)), xp: 0 };
+  return { id: s.nextId++, name: pick(s, names[o.species]), origin, classId, talent: 0.95 + Math.floor(random(s) * 11) / 100, level: Math.min(MAX_LEVEL,1 + Math.floor(s.depth / 10)), xp: 0 };
 }
 export function stats(s, a) {
   const c = CLASSES[a.classId], o = ORIGINS[a.origin], growth = 1 + (a.level - 1) * .12;
@@ -93,10 +94,11 @@ function endRoom(s, win) {
     const oldDepth = s.depth;
     s.depth = Math.max(s.depth, e.depth); s.records.wins++;
     if (oldDepth < 5 && s.depth >= 5) note(s,'The first Gatekeeper falls. Expanded quarters can now unlock a fourth party slot.');
-    if (Math.floor(oldDepth / 10) < Math.floor(s.depth / 10)) note(s,`Word of your Guild spreads. New applicants now arrive at level ${Math.min(1000,1+Math.floor(s.depth/10))}. Existing applicants stay available.`);
+    if (Math.floor(oldDepth / 10) < Math.floor(s.depth / 10)) note(s,`Word of your Guild spreads. New applicants now arrive at level ${Math.min(MAX_LEVEL,1+Math.floor(s.depth/10))}. Existing applicants stay available.`);
     for (const u of e.units) {
-      const a = s.roster.find(a => a.id === u.id); a.xp += 8 + e.depth * 2;
-      while (a.xp >= xpNeeded(a) && a.level < 1000) { a.xp -= xpNeeded(a); a.level++; }
+      const a = s.roster.find(a => a.id === u.id); a.xp = Math.min(1e12,a.xp + 8 + e.depth * 2);
+      while (a.xp >= xpNeeded(a) && a.level < MAX_LEVEL) { a.xp -= xpNeeded(a); a.level++; }
+      if(a.level===MAX_LEVEL) a.xp=0;
     }
   } else { s.records.defeats++; s.auto = false; }
   const reason = win ? 'Victory' : e.elapsed >= 180 ? 'Stalemate: recalled after 180 seconds' : 'Defeat: the party was overwhelmed';
@@ -164,7 +166,7 @@ function validateSave(s) {
   if (!Array.isArray(s.roster) || s.roster.length > capacity(s) || !Array.isArray(s.applicants) || s.applicants.length > 3) fail();
   const ids = new Set();
   for (const a of [...s.roster, ...s.applicants]) {
-    if (!a || !int(a.id) || a.id < 1 || ids.has(a.id) || a.id >= s.nextId || typeof a.name !== 'string' || a.name.length > 40 || !Object.hasOwn(CLASSES,a.classId) || !Object.hasOwn(ORIGINS,a.origin) || !ORIGINS[a.origin].classes.includes(a.classId) || !num(a.talent,1.05) || a.talent < .95 || !int(a.level,1000) || a.level < 1 || !int(a.xp)) fail(); ids.add(a.id);
+    if (!a || !int(a.id) || a.id < 1 || ids.has(a.id) || a.id >= s.nextId || typeof a.name !== 'string' || a.name.length > 40 || !Object.hasOwn(CLASSES,a.classId) || !Object.hasOwn(ORIGINS,a.origin) || !ORIGINS[a.origin].classes.includes(a.classId) || !num(a.talent,1.05) || a.talent < .95 || !int(a.level,MAX_LEVEL) || a.level < 1 || !int(a.xp)) fail(); ids.add(a.id);
   }
   if (!Array.isArray(s.party) || s.party.length > partySlots(s) || new Set(s.party).size !== s.party.length || s.party.some(id => !s.roster.some(a => a.id === id))) fail();
   if (!s.records || ['wins','defeats','gold'].some(k => !num(s.records[k])) || !Array.isArray(s.log) || s.log.length > 40 || s.log.some(l => !l || !num(l.time) || typeof l.message !== 'string' || l.message.length > 500)) fail();

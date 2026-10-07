@@ -19,6 +19,8 @@ npm test
 npm run simulate
 node tools/party-study.js
 node tools/journey-study.js
+# Longer active-play scenarios: seconds and seed count
+node tools/journey-study.js 14400 20
 ```
 
 The engine has no browser dependencies. Seeded generation, one-second combat, and offline resolution use the same code. Content lives in `src/content.js`; development findings and continuation priorities live in `docs/`.
