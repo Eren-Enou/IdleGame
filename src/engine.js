@@ -31,7 +31,7 @@ export const hireCost = a => 25 + (a.level - 1) * 10;
 export const recruitmentCost = (s, a) => s.roster.length === 0 && s.gold < hireCost(a) ? 0 : hireCost(a);
 export const xpNeeded = a => 20 + (a.level - 1) * 12;
 export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
-  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0 }, policy: 'push', farmDepth: 1, auto: false, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
+  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, auto: false, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
   s.applicants = ['guardian', 'ranger', 'cleric'].map(c => generate(s, c));
   note(s, 'Your charter is signed. Recruit three adventurers and open the Delve.');
   return s;
@@ -86,6 +86,32 @@ export function equipmentFactor(key,trigger,tags) {
 export function combatPowers(a) {
   const ability=abilityFor(a);
   return { basic:a.attack*equipmentFactor(a.equipment,'attack',['physical']), ability:a.attack*equipmentFactor(a.equipment,'ability',ability.tags), cooldown:abilityCooldown(a) };
+}
+function mentorshipXP(a,target) {
+  const levels=target-a.level;
+  return levels*xpNeeded(a)+6*levels*(levels-1);
+}
+export function mentorshipQuote(s,id,mode='one') {
+  const a=s.roster.find(a=>a.id===id);
+  if(!a || !s.upgrades.mentorship || !['one','catchup'].includes(mode)) return null;
+  const veteran=s.roster.reduce((best,a)=>a.level>best.level?a:best);
+  if(a.level>=veteran.level) return null;
+  const price=target=>Math.max(10*(target-a.level),Math.ceil(Math.max(0,mentorshipXP(a,target)-a.xp)/4));
+  let target=a.level+1;
+  if(mode==='catchup' && price(target)<=s.gold){
+    let low=target,high=veteran.level;
+    while(low<high){const mid=Math.ceil((low+high)/2);if(price(mid)<=s.gold)low=mid;else high=mid-1;}
+    target=low;
+  }
+  return {target,cost:price(target),levels:target-a.level,limit:veteran.level,mentor:veteran.name};
+}
+export function mentor(s,id,mode='one') {
+  if(s.expedition) return false;
+  const quote=mentorshipQuote(s,id,mode),a=s.roster.find(a=>a.id===id);
+  if(!quote || s.gold<quote.cost) return false;
+  s.gold-=quote.cost;a.xp=Math.max(0,a.xp-mentorshipXP(a,quote.target));a.level=quote.target;
+  note(s,`${quote.mentor} mentored ${a.name} to level ${a.level} for ${quote.cost} gold.`);
+  return true;
 }
 function abilityCooldown(a) { return abilityFor(a).cooldown+(EQUIPMENT[a.equipment]?.cooldown || 0); }
 export function stratum(depth) { return STRATA[Math.floor((depth - 1) / 10) % STRATA.length]; }
@@ -196,7 +222,8 @@ function validateSave(s) {
   const int = (n, max = 1e12) => num(n,max) && Number.isInteger(n);
   const events = list => Array.isArray(list) && list.length <= 12 && list.every(l => l && int(l.time,180) && typeof l.message === 'string' && l.message.length <= 300);
   if (!s || s.version !== VERSION || !int(s.rng,4294967295) || !int(s.nextId) || !num(s.gold) || !int(s.depth,1000000) || !num(s.savedAt,1e15) || !int(s.clock) || !int(s.applicantTimer,119) || typeof s.auto !== 'boolean' || !['push','farm'].includes(s.policy) || !int(s.farmDepth,1000000) || s.farmDepth < 1) fail();
-  if (!s.upgrades || Object.keys(UPGRADES).some(k => !int(s.upgrades[k], UPGRADES[k].max))) fail();
+  if(!s.upgrades) fail(); s.upgrades.mentorship ??= 0;
+  if (Object.keys(UPGRADES).some(k => !int(s.upgrades[k], UPGRADES[k].max))) fail();
   s.equipmentUnlocked ??= [];
   if(!Array.isArray(s.equipmentUnlocked) || s.equipmentUnlocked.length>2 || new Set(s.equipmentUnlocked).size!==s.equipmentUnlocked.length || s.equipmentUnlocked.some(k=>!Object.hasOwn(EQUIPMENT,k))) fail();
   if (!Array.isArray(s.roster) || s.roster.length > capacity(s) || !Array.isArray(s.applicants) || s.applicants.length > 3) fail();

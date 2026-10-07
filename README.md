@@ -26,6 +26,7 @@ node tools/journey-study.js 14400 20
 node tools/equipment-study.js
 node tools/gear-matrix.js
 node tools/technique-study.js
+node tools/recruit-study.js
 ```
 
 The engine has no browser dependencies. Seeded generation, one-second combat, and offline resolution use the same code. Content lives in `src/content.js`; development findings and continuation priorities live in `docs/`.
@@ -33,3 +34,5 @@ The engine has no browser dependencies. Seeded generation, one-second combat, an
 Expedition reports show enemy healing, shield absorption and individual contributions. Compare eight recent completed rooms in the archive; entering levels and equipment stay recorded after party changes.
 
 After conquering depth 10, new applicants may bring a class technique: more frequent smaller effects, larger slower effects, or ranger shots that favor direct damage versus bleed. Existing adventurers keep their technique. Inspect Combat numbers and recruit comparisons before choosing a party.
+
+At depth 20, build the Mentorship hall to train lower-level adventurers with Gold between fights. Roster cards quote a single level or an affordable catch-up target, capped by the most experienced member of your roster. Training preserves technique and equipment.

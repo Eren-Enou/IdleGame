@@ -40,7 +40,7 @@ function equipmentControls(a) {
 function character(a, applicant = false) {
   const c = CLASSES[a.classId], ability=E.abilityFor(a), o = ORIGINS[a.origin], t = E.stats(state,a), selected = state.party.includes(a.id);
   const disabled = applicant ? state.gold < E.recruitmentCost(state,a) || state.roster.length >= E.capacity(state) : !!state.expedition || (!selected && state.party.length >= E.partySlots(state));
-  return `<article class="card ${selected?'selected':''}" style="--character:${c.color}"><div class="card-heading"><div class="portrait" aria-hidden="true">${c.icon}</div><div><h3>${esc(a.name)}</h3><div class="subtitle">${o.species} ${c.name} · Level ${a.level} · ${c.role}</div></div></div><div class="stats"><div>${t.hp}<span>HP</span></div><div>${t.attack}<span>POWER</span></div><div>${t.armor}<span>ARMOR</span></div><div>${t.speed}s<span>ATTACK</span></div></div><div class="trait">${o.trait} · ${o.name}</div><p class="origin-detail">${o.detail} Talent ${Math.round(a.talent*100)}%.</p><p><strong>${ability.name}</strong> — ${c.description}</p><details class="combat-numbers" data-persist="combat-${a.id}"><summary>Combat numbers</summary><p>${esc(combatDescription(state,a))}</p><p>Power above is the base for attacks and abilities. These numbers include current Guild upgrades and equipment; purchases during combat apply to the next room.</p></details>${applicant?comparison(a):equipmentControls(a)}${!applicant?`${bar(a.xp,E.xpNeeded(a),'xp-bar')}<small>${a.xp} / ${E.xpNeeded(a)} XP</small>`:''}<button data-action="${applicant?'hire':'assign'}" data-id="${a.id}" ${disabled?'disabled':''} class="${applicant?'primary':''}">${applicant?E.recruitmentCost(state,a) === 0 ? 'Recruit relief volunteer · Free' : `Recruit · ${E.recruitmentCost(state,a)} gold`:selected?'✓ In party · Remove':'Assign to party'}</button>${!applicant?`<button class="dismiss" data-action="dismiss" data-id="${a.id}" ${state.expedition?'disabled':''}>Dismiss adventurer…</button>`:''}</article>`;
+  return `<article class="card ${selected?'selected':''}" style="--character:${c.color}"><div class="card-heading"><div class="portrait" aria-hidden="true">${c.icon}</div><div><h3>${esc(a.name)}</h3><div class="subtitle">${o.species} ${c.name} · Level ${a.level} · ${c.role}</div></div></div><div class="stats"><div>${t.hp}<span>HP</span></div><div>${t.attack}<span>POWER</span></div><div>${t.armor}<span>ARMOR</span></div><div>${t.speed}s<span>ATTACK</span></div></div><div class="trait">${o.trait} · ${o.name}</div><p class="origin-detail">${o.detail} Talent ${Math.round(a.talent*100)}%.</p><p><strong>${ability.name}</strong> — ${c.description}</p><details class="combat-numbers" data-persist="combat-${a.id}"><summary>Combat numbers</summary><p>${esc(combatDescription(state,a))}</p><p>Power above is the base for attacks and abilities. These numbers include current Guild upgrades and equipment; purchases during combat apply to the next room.</p></details>${applicant?comparison(a):equipmentControls(a)}${!applicant?`${bar(a.xp,E.xpNeeded(a),'xp-bar')}<small>${a.xp} / ${E.xpNeeded(a)} XP</small>${mentorshipControls(a)}`:''}<button data-action="${applicant?'hire':'assign'}" data-id="${a.id}" ${disabled?'disabled':''} class="${applicant?'primary':''}">${applicant?E.recruitmentCost(state,a) === 0 ? 'Recruit relief volunteer · Free' : `Recruit · ${E.recruitmentCost(state,a)} gold`:selected?'✓ In party · Remove':'Assign to party'}</button>${!applicant?`<button class="dismiss" data-action="dismiss" data-id="${a.id}" ${state.expedition?'disabled':''}>Dismiss adventurer…</button>`:''}</article>`;
 }
 const rendered = new Map();
 function html(id, content) {
@@ -49,6 +49,13 @@ function html(id, content) {
   $(id).innerHTML = content;
   for(const detail of $(id).querySelectorAll('details[data-persist]')) if(open.has(detail.dataset.persist)) detail.open=true;
   rendered.set(id,content);
+}
+function mentorshipControls(a) {
+  if(!state.upgrades.mentorship) return '';
+  const one=E.mentorshipQuote(state,a.id),catchup=E.mentorshipQuote(state,a.id,'catchup');
+  if(!one) return '<p class="origin-detail">This adventurer can mentor lower-level Guild members.</p>';
+  const button=(q,mode,label)=>`<button data-action="mentor" data-mode="${mode}" data-id="${a.id}" ${state.expedition||q.cost>state.gold?'disabled':''}>${label} · ${q.cost.toLocaleString()} gold</button>`;
+  return `<div class="mentorship"><p class="origin-detail">${esc(one.mentor)} can mentor to level ${one.limit}. Training costs 1 Gold per 4 remaining XP, at least 10 Gold per level.</p>${button(one,'one','Mentor +1 level')}${catchup.levels>1?button(catchup,'catchup',`Catch up to Lv ${catchup.target}`):''}</div>`;
 }
 function render() {
   const s = state, e = s.expedition, targetDepth = e?.depth || (s.policy==='farm'?Math.min(s.farmDepth,Math.max(1,s.depth)):s.depth+1), region = E.stratum(targetDepth);
@@ -86,6 +93,7 @@ document.addEventListener('click', event => {
   if (b.dataset.action === 'later') ok = E.reorder(state,id,1);
   if (b.dataset.action === 'upgrade') ok = E.buyUpgrade(state,b.dataset.key);
   if (b.dataset.action === 'commission') ok = E.unlockEquipment(state,b.dataset.key);
+  if (b.dataset.action === 'mentor') ok = E.mentor(state,id,b.dataset.mode);
   if (b.dataset.action === 'dismiss' && confirm('Dismiss this adventurer permanently? Their levels and XP will be lost.')) ok = E.dismiss(state,id);
   if (ok) { message(''); save(); render(); }
 });

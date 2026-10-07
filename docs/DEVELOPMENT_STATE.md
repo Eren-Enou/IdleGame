@@ -4,7 +4,7 @@ Goal remains active. Continue meaningful development under DESIGN_CONSTITUTION.m
 
 ## Running and verification
 
-Node >=20.11. `npm start` serves http://127.0.0.1:5173. No install/build step. `npm test` runs 69 tests. `npm run simulate`, `node tools/party-study.js`, `node tools/journey-study.js [seconds] [seeds]`, `node tools/equipment-study.js`, `node tools/gear-matrix.js`, and `node tools/technique-study.js` preserve deterministic bounded experiments. Experiment records 001–008 live in docs/experiments.
+Node >=20.11. `npm start` serves http://127.0.0.1:5173. No install/build step. `npm test` runs 76 tests. `npm run simulate`, `node tools/party-study.js`, `node tools/journey-study.js [seconds] [seeds]`, `node tools/equipment-study.js`, `node tools/gear-matrix.js`, and `node tools/technique-study.js`, and `node tools/recruit-study.js` preserve deterministic bounded experiments. Experiment records 001–009 live in docs/experiments.
 
 ## Current playable game
 
@@ -19,16 +19,18 @@ Node >=20.11. `npm start` serves http://127.0.0.1:5173. No install/build step. `
 
 ## Latest evidence
 
-69 tests passed. Experiment 007 compared 7,200 equipment/composition fights and preserved asymmetric builds. Experiment 008 ran two 6,300-fight technique passes, validating every terminal save. Initially ranger variants improved nearly all sampled matchups; final lower bleed throughput retains advantages with costs. Frequent smaller heals interact poorly with steel's flat cooldown penalty; standard abilities remain valuable. Thirty one-hour journeys with the latest generation saved/reloaded at mean depths 238.5 training, 248.1 mixed, 339.3 fourth member. These samples do not prove enjoyment or universal balance.
+76 tests passed. Experiment 007 compared 7,200 equipment/composition fights and preserved asymmetric builds. Experiment 008 ran two 6,300-fight technique passes, validating every terminal save. Initially ranger variants improved nearly all sampled matchups; final lower bleed throughput retains advantages with costs. Frequent smaller heals interact poorly with steel's flat cooldown penalty; standard abilities remain valuable. Thirty one-hour journeys with the latest generation saved/reloaded at mean depths 238.5 training, 248.1 mixed, 339.3 fourth member. These samples do not prove enjoyment or universal balance.
 
-Browser verified recruiting Quiet mending, assigning a fourth party member, ritual equipment, completed combat, named technique report, and reload persistence. Earlier checks cover the full recruit/battle/reward/invest/repeat loop, farming input, applicant levels, archive layout and cross-tab purchase preservation.
+Browser verified the depth-20 mentorship unlock, 450-Gold hall and 47-Gold catch-up from level 9 to 11, stats and reload persistence. Earlier checks verified recruiting Quiet mending, assigning a fourth party member, ritual equipment, completed combat, named technique report, and reload persistence. Earlier checks cover the full recruit/battle/reward/invest/repeat loop, farming input, applicant levels, archive layout and cross-tab purchase preservation.
 
 ## Priorities and limitations
 
-1. Study technique combinations and recruit replacement economics; current study changes one class at a time. Existing veterans may make new applicant choices unattractive despite distinct abilities.
+1. Test actual replacement fights after mentorship and compare spending on recruit training versus facilities. Experiment 009 already covers technique combinations; experience gaps now have a priced catch-up route.
 2. Improve individual identity/history if it supports attachment and roster decisions; name pool and career feedback are sparse.
 3. Late-game Gold has no meaningful use after finite facility ranks. Investigate an interacting Guild progression or expedition policy, without inventing disconnected currencies.
 4. Full recovery limits expedition risk management. Three archetypes/regions, no multi-party expeditions or exploration policy yet; these are opportunities, not a mandatory checklist.
 5. Browser integration checks remain manual automation; engine checks are repeatable. Local browser save only; no remote sync.
 
-Do not flatten useful specializations or add breadth without evidence. Latest internal review is in DEVELOPMENT_LOG.md after the technique milestone. Next recommended task: combinations and replacement economics, then choose the next coherent improvement.
+Do not flatten useful specializations or add breadth without evidence. Latest internal review is in DEVELOPMENT_LOG.md after the technique milestone. Next recommended task: replacement combat outcomes after mentorship and long-session investment agency, then choose the next coherent improvement.
+
+Experiment 009 compares 12,150 technique combinations and 30 recruitment journeys. Fresh recruit power falls to about 31% of veterans after an hour. Added a depth-20 Mentorship hall (450 Gold), with exact one-level/affordable catch-up quotes on roster cards. Training consumes Gold, respects remaining XP and caps at the highest roster level; it locks during combat and retains identity/equipment. Available one-hour savings bring recruits to about 87% veteran power, with facility/hire costs paid. Next: evaluate actual replacement fights and longer Gold agency, alongside character history/identity.
