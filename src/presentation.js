@@ -8,7 +8,7 @@ export function combatDescription(s,a) {
   if(ability.effect==='shield') effect=ability.target==='party'?`Adds ${amount} shield to each living party member, up to 60% of each recipient's maximum HP. Does not restore health or revive.`:`Adds ${amount} shield to self, up to ${Math.round(t.hp*.6)} stored shield.`;
   if(ability.effect==='heal') effect=`Restores up to ${amount} HP to the living ally with the lowest health percentage.${s.upgrades.infirmary>0?' Cleanses one harmful status.':''}`;
   if(ability.effect==='bleed') effect=`Deals ${Math.round(powers.ability*ability.directScale)} damage before armor, then ${amount} bleed damage each second for 4 seconds; bleed ignores armor.`;
-  return `${basic} ${ability.name}: every ${powers.cooldown}s. ${effect} Shields absorb incoming damage.`;
+  return `${basic} ${ability.name}: ${a.equipment==='dawn'?`first cast at 1s, then every ${powers.cooldown}s`:`every ${powers.cooldown}s`}. ${effect} Shields absorb incoming damage.`;
 }
 export function compareRecruit(s, candidate) {
   const peer = s.roster.find(a => a.classId === candidate.classId && s.party.includes(a.id)) || s.roster.find(a => a.classId === candidate.classId);

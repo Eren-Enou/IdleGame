@@ -64,3 +64,5 @@ Applicant cards preview training after hiring once the Mentorship hall is availa
 Set a Destination depth and press Set destination to stop further frontier pushes once it is conquered. Use 0 for unlimited pushing. Current combat finishes, farming remains available, and recovery can still farm/retry before arrival. Queued recovery locks destination changes until canceled. The destination works offline too.
 
 New applicants use full names from their origin's naming pool and avoid names already held by active Guild members or applicants. Existing names, saved lineups and historical reports stay preserved.
+
+Depth 50 unlocks the Cartography desk (750 Gold). Survey the highest conquered ordinary Rootways room for the Dawn seal blueprint: 20% victory discovery chance, plus 10% per Ranger, up to 50%. Surveys earn normal Gold/XP and stop repeating on discovery or defeat. Commission the blueprint for 1,200 Gold. Dawn casts the first ability at 1s, then uses normal cooldowns, with +10% basic damage; steel offers stronger sustained attacks and ritual stronger abilities. Survey works offline. Run `node tools/survey-study.js` for paired equipment and journey evidence.

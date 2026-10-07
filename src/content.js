@@ -14,6 +14,7 @@ export const UPGRADES = {
   infirmary: { name: 'Guild infirmary', cost: 55, factor: 1.7, max: 20, description: 'Each rank adds 15% maximum health. Rank 1 also lets Mending light cleanse one harmful status. Parties recover fully between rooms.' },
   quarters: { name: 'Expanded quarters', cost: 100, factor: 2, max: 6, unlockDepth: 5, description: 'Clear depth 5 to unlock. Each rank makes room for two more adventurers. First rank unlocks a fourth party slot.' },
   mentorship: { name:'Mentorship hall', cost:450, factor:1, max:1, unlockDepth:20, description:'Veterans can mentor lower-level Guild members between fights. Spend Gold on roster cards to close the experience gap, up to the highest level in your roster.' },
+  cartography: { name:'Cartography desk', cost:750, factor:1, max:1, unlockDepth:50, description:'Survey the highest conquered ordinary Rootways room for a Dawn seal blueprint. Victories have a 20% discovery chance, plus 10% per Ranger, up to 50%. Automatic surveys stop on discovery or defeat.' },
 };
 export const STRATA = [
   { name: 'The Rootways', subtitle: 'Old roots. Older debts.', enemies: ['Root rat', 'Moss crawler', 'Tunnel brigand'], hazard: 'Ordinary encounters. A guardian can protect the back line.' },
@@ -28,6 +29,7 @@ export const GATEKEEPERS = [
   { name: 'The Silver Adjudicator', effect: 'strongest', scale: .7, description: 'Every third attack, strikes the living adventurer with the highest attack power for 70% enemy attack. Guardians cannot intercept this extra strike.' },
 ];
 export const EQUIPMENT = {
+  dawn: { name:'Dawn seal', cost:1200, unlockDepth:50, discovery:'dawn', openingCooldown:1, cooldown:0, description:'First ability casts after 1 second; later casts use the usual cooldown. Basic attacks gain 10% damage. Gives up the stronger sustained attacks or abilities of other equipment. Discover its blueprint by surveying the Rootways.', modifiers:[{trigger:'attack',tags:['physical'],factor:1.1}] },
   steel: { name: "Soldier's seal", cost: 120, cooldown: 2, description: 'Basic physical attacks gain 35% damage. Abilities take 2 extra seconds to recharge.', modifiers: [{ trigger: 'attack', tags: ['physical'], factor: 1.35 }] },
   ritual: { name: 'Ritual focus', cost: 120, cooldown: 0, description: 'Ward, healing and bleed abilities gain 35% strength. Basic attacks deal 20% less damage.', modifiers: [{ trigger: 'ability', tags: ['ward','heal','bleed'], factor: 1.35 }, { trigger: 'attack', tags: ['physical'], factor: .8 }] },
 };

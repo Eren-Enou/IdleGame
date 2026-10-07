@@ -38,7 +38,7 @@ export const hireCost = a => 25 + (a.level - 1) * 10;
 export const recruitmentCost = (s, a) => s.roster.length === 0 && s.gold < hireCost(a) ? 0 : hireCost(a);
 export const xpNeeded = a => 20 + (a.level - 1) * 12;
 export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
-  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], partyPlans:[null,null,null], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, pushLimit:0, auto: false, recovery:{enabled:false,rooms:10,percent:80,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
+  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], partyPlans:[null,null,null], equipmentUnlocked: [], discoveries:[], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0, cartography:0 }, policy: 'push', farmDepth: 1, pushLimit:0, auto: false, recovery:{enabled:false,rooms:10,percent:80,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
   for(const c of ['guardian','ranger','cleric'])s.applicants.push(generate(s,c));
   note(s, 'Your charter is signed. Recruit three adventurers and open the Delve.');
   return s;
@@ -77,7 +77,7 @@ export function refreshApplicants(s) {
   s.gold -= 10; s.applicants=[];while(s.applicants.length<3)s.applicants.push(generate(s));s.applicantTimer = 0; return true;
 }
 export function unlockEquipment(s, key) {
-  if(!Object.hasOwn(EQUIPMENT,key) || s.depth<10 || s.equipmentUnlocked.includes(key) || s.gold<EQUIPMENT[key].cost) return false;
+  if(!Object.hasOwn(EQUIPMENT,key) || !equipmentAvailable(s,key) || s.equipmentUnlocked.includes(key) || s.gold<EQUIPMENT[key].cost) return false;
   s.gold-=EQUIPMENT[key].cost; s.equipmentUnlocked.push(key); note(s,`${EQUIPMENT[key].name} commissioned. Equip it freely on the roster.`); return true;
 }
 export function equip(s,id,key) {
@@ -94,6 +94,7 @@ export function combatPowers(a) {
   const ability=abilityFor(a);
   return { basic:a.attack*equipmentFactor(a.equipment,'attack',['physical']), ability:a.attack*equipmentFactor(a.equipment,'ability',ability.tags), cooldown:abilityCooldown(a) };
 }
+export function equipmentAvailable(s,key){const item=EQUIPMENT[key];return !!item&&s.depth>=(item.unlockDepth||10)&&(!item.discovery||s.discoveries.includes(item.discovery));}
 function mentorshipXP(a,target) {
   const levels=target-a.level;
   return levels*xpNeeded(a)+6*levels*(levels-1);
@@ -156,6 +157,10 @@ export function applyPartyPlan(s,slot){
   note(s,`${plan.name} party plan applied.`);return true;
 }
 function abilityCooldown(a) { return abilityFor(a).cooldown+(EQUIPMENT[a.equipment]?.cooldown || 0); }
+export const openingCooldown=a=>EQUIPMENT[a.equipment]?.openingCooldown||abilityCooldown(a);
+export function surveyDepth(s){let depth=Math.max(1,s.depth);while(regionIndex(depth)!==0||depth%5===0)depth--;return depth;}
+export const surveyChance=units=>Math.min(.5,.2+.1*units.filter(u=>u.classId==='ranger').length);
+export const surveyComplete=s=>s.discoveries.includes('dawn');
 export function regionIndex(depth) { return Math.floor((depth - 1) / 10) % STRATA.length; }
 export function stratum(depth) { return STRATA[regionIndex(depth)]; }
 export function makeEnemy(depth) {
@@ -166,19 +171,20 @@ export function makeEnemy(depth) {
 }
 export function startExpedition(s) {
   if (s.expedition) return false;
+  if(s.policy==='survey'&&(!s.upgrades.cartography||surveyComplete(s)))return false;
   if(s.policy==='push'&&pushDestinationReached(s)){if(s.auto){setAuto(s,false);note(s,`Destination depth ${s.pushLimit} is already conquered. Automatic pushing stopped.`);}return false;}
   if(!s.party.length)return false;
-  const depth = s.policy === 'farm' ? Math.min(s.farmDepth, Math.max(1, s.depth)) : s.depth + 1;
+  const depth = s.policy==='survey'?surveyDepth(s):s.policy === 'farm' ? Math.min(s.farmDepth, Math.max(1, s.depth)) : s.depth + 1;
   const seed = (random(s) * 4294967296) >>> 0;
-  s.expedition = { depth, elapsed: 0, seed, rng: seed, events: [], enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, name: a.name, classId: a.classId, level: a.level, technique:a.technique, taken: 0, ...t, equipment: a.equipment, maxHp: t.hp, shield: 0, warded:0, cooldown: 1, abilityCooldown: abilityCooldown(a), status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
+  s.expedition = { depth, purpose:s.policy, elapsed: 0, seed, rng: seed, events: [], enemy: makeEnemy(depth), units: s.party.map(id => { const a = s.roster.find(a => a.id === id), t = stats(s, a); return { id, name: a.name, classId: a.classId, level: a.level, technique:a.technique, taken: 0, ...t, equipment: a.equipment, maxHp: t.hp, shield: 0, warded:0, cooldown: 1, abilityCooldown: openingCooldown(a), status: [], damage: 0, healing: 0, blocked: 0, cleansed: 0, cleanse: s.upgrades.infirmary > 0 }; }) };
   s.expedition.frontId = s.expedition.units.find(u=>u.classId==='guardian')?.id || s.party[0];
   return true;
 }
 function clearRecovery(s){s.recovery.remaining=0;s.recovery.depth=0;}
 export const pushDestinationReached=s=>s.pushLimit>0&&s.depth>=s.pushLimit;
 export function setPushLimit(s,limit){if(!Number.isInteger(limit)||limit<0||limit>1000000||s.recovery.remaining>0)return false;s.pushLimit=limit;if(s.policy==='push'&&pushDestinationReached(s))setAuto(s,false);return true;}
-export function setPolicy(s,policy){if(!['push','farm'].includes(policy))return false;s.policy=policy;clearRecovery(s);if(policy==='push'&&pushDestinationReached(s))setAuto(s,false);return true;}
-export function setAuto(s,auto){if(typeof auto!=='boolean'||(auto&&s.policy==='push'&&pushDestinationReached(s)))return false;s.auto=auto;if(!auto)clearRecovery(s);return true;}
+export function setPolicy(s,policy){if(!['push','farm','survey'].includes(policy)||(policy==='survey'&&!s.upgrades.cartography))return false;s.policy=policy;clearRecovery(s);if((policy==='push'&&pushDestinationReached(s))||(policy==='survey'&&surveyComplete(s)))setAuto(s,false);return true;}
+export function setAuto(s,auto){if(typeof auto!=='boolean'||(auto&&((s.policy==='push'&&pushDestinationReached(s))||(s.policy==='survey'&&(!s.upgrades.cartography||surveyComplete(s))))))return false;s.auto=auto;if(!auto)clearRecovery(s);return true;}
 export function recoveryTarget(s,percent=s.recovery.percent){
   let depth=Math.max(1,Math.floor(s.depth*percent/100));if(depth%5===0)depth--;
   return depth;
@@ -225,6 +231,7 @@ function endRoom(s, win) {
     if (oldDepth < 5 && s.depth >= 5) note(s,'The first Gatekeeper falls. Expanded quarters can now unlock a fourth party slot.');
     if (oldDepth < 30 && s.depth >= 30) note(s,'Beyond the Sanctum, the Mirror Halls open. Direct damage returns to its attacker; prepare shields, healing or bleed before entering.');
     if (oldDepth < 40 && s.depth >= 40) note(s,'The Mirror Halls are charted. Human and Dwarf Wardens may now apply to the Guild, bringing shields for the entire party. Existing applicants stay available.');
+    if (oldDepth < 50 && s.depth >= 50) note(s,'The Rootways hold undiscovered paths. A Cartography desk can now send the party to survey conquered rooms for an equipment blueprint.');
     if (Math.floor(oldDepth / 10) < Math.floor(s.depth / 10)) note(s,`Word of your Guild spreads. New applicants now arrive at level ${Math.min(MAX_LEVEL,1+Math.floor(s.depth/10))}. Existing applicants stay available.`);
     for (const u of e.units) {
       const a = s.roster.find(a => a.id === u.id); a.xp = Math.min(1e12,a.xp + 8 + e.depth * 2);
@@ -234,12 +241,15 @@ function endRoom(s, win) {
   } else { s.records.defeats++; }
   const reason = win ? 'Victory' : e.elapsed >= 180 ? 'Stalemate: recalled after 180 seconds' : 'Defeat: the party was overwhelmed';
   battleNote(e,win?`${e.enemy.name} defeated.`:reason);
-  s.lastReport = { depth: e.depth, at: s.clock, seed: e.seed, events: e.events, win, reward, seconds: e.elapsed, reason, frontId: e.frontId,
+  let discovery=null;
+  if(win&&e.purpose==='survey'&&!surveyComplete(s)&&random(e)<surveyChance(e.units)){discovery='dawn';s.discoveries.push(discovery);note(s,'Rootways survey discovered the Dawn seal blueprint. Commission it in the Guild workshop.');battleNote(e,'Dawn seal blueprint discovered.');}
+  s.lastReport = { depth: e.depth, purpose:e.purpose, discovery, at: s.clock, seed: e.seed, events: e.events, win, reward, seconds: e.elapsed, reason, frontId: e.frontId,
     enemy: { name: e.enemy.name, hp: e.enemy.hp, maxHp: e.enemy.maxHp, blocked: e.enemy.blocked, healing: e.enemy.healing, boss: e.enemy.boss, region: e.enemy.region, reflected:e.enemy.reflected },
     units: e.units.map(u => ({ id: u.id, name: u.name, classId: u.classId, level: u.level, technique:u.technique, equipment: u.equipment, taken: u.taken, damage: u.damage, healing: u.healing, blocked: u.blocked, warded:u.warded, cleansed: u.cleansed, survived: u.hp > 0 })) };
   s.reports.unshift(s.lastReport); s.reports.length=Math.min(s.reports.length,8);
   note(s, `${reason} at depth ${e.depth}. ${win ? `+${reward} gold. Party recovered.` : 'Everyone returned safely. Try training, a healer, or a shallower farm.'}`);
   s.expedition = null;
+  if(s.policy==='survey'&&surveyComplete(s)){setAuto(s,false);note(s,'Rootways survey complete. Choose new expedition orders.');return;}
   if(s.policy==='push'&&pushDestinationReached(s)){setAuto(s,false);note(s,`Destination depth ${s.pushLimit} reached. Automatic pushing stopped; the Guild awaits new orders.`);return;}
   if(s.recovery.remaining>0){
     if(!win){setAuto(s,false);note(s,'Recovery farming failed. Automatic orders stopped; choose a shallower farm or adjust the party.');}
@@ -313,16 +323,18 @@ function validateSave(s) {
   const int = (n, max = 1e12) => num(n,max) && Number.isInteger(n);
   const events = list => Array.isArray(list) && list.length <= 12 && list.every(l => l && int(l.time,180) && typeof l.message === 'string' && l.message.length <= 300);
   if(s&&s.pushLimit===undefined)s.pushLimit=0;
-  if (!s || s.version !== VERSION || !int(s.rng,4294967295) || !int(s.nextId) || !num(s.gold) || !int(s.depth,1000000) || !num(s.savedAt,1e15) || !int(s.clock) || !int(s.applicantTimer,119) || typeof s.auto !== 'boolean' || !['push','farm'].includes(s.policy) || !int(s.farmDepth,1000000) || s.farmDepth < 1) fail();
+  if (!s || s.version !== VERSION || !int(s.rng,4294967295) || !int(s.nextId) || !num(s.gold) || !int(s.depth,1000000) || !num(s.savedAt,1e15) || !int(s.clock) || !int(s.applicantTimer,119) || typeof s.auto !== 'boolean' || !['push','farm','survey'].includes(s.policy) || !int(s.farmDepth,1000000) || s.farmDepth < 1) fail();
   if(!int(s.pushLimit,1000000))fail();
-  if(!s.upgrades) fail(); s.upgrades.mentorship ??= 0;
+  if(!s.upgrades) fail(); s.upgrades.mentorship ??= 0; if(s.upgrades.cartography===undefined)s.upgrades.cartography=0;
   s.recovery ??= {enabled:false,rooms:10,percent:80,remaining:0,depth:0};
   const recovery=s.recovery;
   if(recovery&&typeof recovery==='object'&&recovery.percent===undefined)recovery.percent=80;
   if(!recovery||typeof recovery.enabled!=='boolean'||![60,80,95].includes(recovery.percent)||![5,10,20].includes(recovery.rooms)||!int(recovery.remaining,recovery.rooms)||!int(recovery.depth,s.depth)||(recovery.enabled&&s.depth<5)||(recovery.remaining>0&&(!recovery.enabled||!s.auto||s.policy!=='farm'||recovery.depth<1||s.farmDepth!==recovery.depth))||(recovery.remaining===0&&recovery.depth!==0))fail();
   if (Object.keys(UPGRADES).some(k => !int(s.upgrades[k], UPGRADES[k].max))) fail();
+  if(s.discoveries===undefined)s.discoveries=[];
+  if(!Array.isArray(s.discoveries)||s.discoveries.length>1||s.discoveries.some(k=>k!=='dawn')||(s.upgrades.cartography&&s.depth<50)||(s.discoveries.length&&(!s.upgrades.cartography||s.depth<50))||(s.policy==='survey'&&(!s.upgrades.cartography||(s.auto&&surveyComplete(s)))))fail();
   s.equipmentUnlocked ??= [];
-  if(!Array.isArray(s.equipmentUnlocked) || s.equipmentUnlocked.length>2 || new Set(s.equipmentUnlocked).size!==s.equipmentUnlocked.length || s.equipmentUnlocked.some(k=>!Object.hasOwn(EQUIPMENT,k))) fail();
+  if(!Array.isArray(s.equipmentUnlocked) || s.equipmentUnlocked.length>Object.keys(EQUIPMENT).length || new Set(s.equipmentUnlocked).size!==s.equipmentUnlocked.length || s.equipmentUnlocked.some(k=>!Object.hasOwn(EQUIPMENT,k)||(EQUIPMENT[k].discovery&&!s.discoveries.includes(EQUIPMENT[k].discovery)))) fail();
   if (!Array.isArray(s.roster) || s.roster.length > capacity(s) || !Array.isArray(s.applicants) || s.applicants.length > 3) fail();
   const ids = new Set();
   for (const a of [...s.roster, ...s.applicants]) {
@@ -343,6 +355,8 @@ function validateSave(s) {
   }
   if (!s.records || ['wins','defeats','gold'].some(k => !num(s.records[k])) || !Array.isArray(s.log) || s.log.length > 40 || s.log.some(l => !l || !num(l.time) || typeof l.message !== 'string' || l.message.length > 500)) fail();
   const validateReport = r => {
+    if(!r)fail(); if(r.purpose===undefined)r.purpose='unknown'; if(r.discovery===undefined)r.discovery=null;
+    if(!['push','farm','survey','unknown'].includes(r.purpose)||(r.discovery!==null&&(r.discovery!=='dawn'||r.purpose!=='survey'||!r.win||!s.discoveries.includes(r.discovery)))||(r.purpose==='survey'&&(!s.upgrades.cartography||r.depth<1||r.depth>s.depth||regionIndex(r.depth)!==0||r.depth%5===0)))fail();
     if (!r || !int(r.depth,1000000) || !num(r.reward) || !int(r.seconds,180) || typeof r.win !== 'boolean' || typeof r.reason !== 'string' || r.reason.length > 100 || !Array.isArray(r.units) || r.units.length > 4 || r.units.some(u => !u || !int(u.id) || !num(u.damage) || !num(u.healing) || typeof u.survived !== 'boolean')) fail();
     for (const u of r.units) {
       const a=s.roster.find(a=>a.id===u.id);
@@ -360,6 +374,8 @@ function validateSave(s) {
   for(const report of s.reports) validateReport(report);
   if (s.expedition !== null) {
     const e = s.expedition;
+    if(!e)fail(); if(e.purpose===undefined)e.purpose='unknown';
+    if(!['push','farm','survey','unknown'].includes(e.purpose)||(e.purpose==='survey'&&(!s.upgrades.cartography||e.depth<1||e.depth>s.depth||regionIndex(e.depth)!==0||e.depth%5===0)))fail();
     if (!e || !int(e.depth,1000000) || e.depth < 1 || !int(e.elapsed,180) || !int(e.seed,4294967295) || !Array.isArray(e.units) || e.units.length !== s.party.length || !e.units.length || new Set(e.units.map(u => u.id)).size !== e.units.length) fail();
     e.events ??= []; e.rng ??= s.rng; if (!events(e.events) || !int(e.rng,4294967295)) fail();
     for (const u of [...e.units, e.enemy]) {
