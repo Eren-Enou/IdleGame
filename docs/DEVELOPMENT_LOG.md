@@ -37,3 +37,9 @@ Browser confirmed live and final-room timeline rendering, including the Root Gat
 ## 2026-10-06 — Remove artificial early level ceiling
 
 Experiment 005 simulated four-hour and day-long progression. Four-member parties reached level 1,000 within the day and accumulated XP with no benefit. Raised the numerical ceiling to 1,000,000, preserved existing XP, bounded XP and verified finite extreme stats. All 42 tests passed; 15 repeated day-long journeys saved/reloaded correctly. This corrects the ceiling but does not establish adequate long-term agency: finished Guild investments leave Gold without meaningful use. Next iteration should test alternate equipment builds through existing ability tags/cooldowns, not invent a disconnected progression currency.
+
+## 2026-10-06 — Workshop equipment tradeoffs
+
+Implemented two workshop patterns unlocked at depth 10, using existing Gold and shared attack/ability triggers and tags. Steel improves basic attacks but slows abilities; ritual improves ward/heal/bleed abilities but weakens basics. One equipped item per adventurer, freely changeable between fights. Legacy saves default to unequipped without resetting progress.
+
+Experiment 006 ran 2,400 equal-power encounters and validated every terminal save. Steel speeds easy farming; ritual can solve a near-wall Root Gatekeeper (100% vs 22% baseline wins at level 12/depth 35). Neither solves underpowered Ember encounters. Preserve this specialization rather than flattening everything into equal performance. Browser verified commissioning costs, per-character selection, modified cooldown descriptions and combat locks. All 49 tests pass.

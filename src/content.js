@@ -23,3 +23,7 @@ export const GATEKEEPERS = [
   { name: 'Cinder Librarian', effect: 'cleave', scale: .55, description: 'Every third attack, lashes the entire party for 55% attack damage. A guardian cannot intercept it; healers and health help.' },
   { name: 'The Hollow Prior', effect: 'bleed', scale: .12, description: 'Every third attack, wounds the front line for 4 seconds. Infirmary rank 1 lets Mending light cleanse one harmful status.' },
 ];
+export const EQUIPMENT = {
+  steel: { name: "Soldier's seal", cost: 120, cooldown: 2, description: 'Basic physical attacks gain 35% damage. Abilities take 2 extra seconds to recharge.', modifiers: [{ trigger: 'attack', tags: ['physical'], factor: 1.35 }] },
+  ritual: { name: 'Ritual focus', cost: 120, cooldown: 0, description: 'Ward, healing and bleed abilities gain 35% strength. Basic attacks deal 20% less damage.', modifiers: [{ trigger: 'ability', tags: ['ward','heal','bleed'], factor: 1.35 }, { trigger: 'attack', tags: ['physical'], factor: .8 }] },
+};
