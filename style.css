@@ -795,3 +795,6 @@ footer button,.file-button {
 .combat-numbers { border-top: 1px solid var(--line); padding: 10px 0; font-size: 12px; }
 .combat-numbers summary { cursor: pointer; color: var(--teal); }
 .combat-numbers p { line-height: 1.6; }
+#recovery-controls[hidden] { display: none; }
+#recovery-controls { border-top: 1px solid var(--line); padding: 12px 0; }
+#recovery-status { color: var(--gold); font-size: 12px; }

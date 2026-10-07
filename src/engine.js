@@ -32,7 +32,7 @@ export const hireCost = a => 25 + (a.level - 1) * 10;
 export const recruitmentCost = (s, a) => s.roster.length === 0 && s.gold < hireCost(a) ? 0 : hireCost(a);
 export const xpNeeded = a => 20 + (a.level - 1) * 12;
 export function createGame(seed = Date.now() >>> 0, now = Date.now()) {
-  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, auto: false, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
+  const s = { version: VERSION, rng: seed >>> 0, nextId: 1, gold: 90, depth: 0, roster: [], applicants: [], party: [], equipmentUnlocked: [], upgrades: { training: 0, infirmary: 0, quarters: 0, mentorship:0 }, policy: 'push', farmDepth: 1, auto: false, recovery:{enabled:false,rooms:10,remaining:0,depth:0}, expedition: null, applicantTimer: 0, clock: 0, savedAt: now, log: [], records: { wins: 0, defeats: 0, gold: 0 }, lastReport: null, reports: [] };
   s.applicants = ['guardian', 'ranger', 'cleric'].map(c => generate(s, c));
   note(s, 'Your charter is signed. Recruit three adventurers and open the Delve.');
   return s;
@@ -130,7 +130,14 @@ export function startExpedition(s) {
   s.expedition.frontId = s.expedition.units.find(u=>u.classId==='guardian')?.id || s.party[0];
   return true;
 }
-export function retreat(s) { if (!s.expedition) return false; s.expedition = null; s.auto = false; note(s, 'Expedition recalled safely. No rewards from the unfinished room.'); return true; }
+function clearRecovery(s){s.recovery.remaining=0;s.recovery.depth=0;}
+export function setPolicy(s,policy){if(!['push','farm'].includes(policy))return false;s.policy=policy;clearRecovery(s);return true;}
+export function setAuto(s,auto){if(typeof auto!=='boolean')return false;s.auto=auto;if(!auto)clearRecovery(s);return true;}
+export function configureRecovery(s,enabled,rooms=s.recovery.rooms){
+  if(typeof enabled!=='boolean'||![5,10,20].includes(rooms)||(enabled&&s.depth<5)||(enabled&&s.recovery.remaining>0&&rooms!==s.recovery.rooms))return false;
+  s.recovery.enabled=enabled;s.recovery.rooms=rooms;if(!enabled)clearRecovery(s);return true;
+}
+export function retreat(s) { if (!s.expedition) return false; s.expedition = null; setAuto(s,false); note(s, 'Expedition recalled safely. No rewards from the unfinished room.'); return true; }
 function hit(target, amount, pierce = false) {
   let n = Math.max(1, Math.round(amount) - (pierce ? 0 : target.armor));
   const absorbed = Math.min(target.shield, n); target.shield -= absorbed; n -= absorbed;
@@ -163,7 +170,7 @@ function endRoom(s, win) {
       while (a.xp >= xpNeeded(a) && a.level < MAX_LEVEL) { a.xp -= xpNeeded(a); a.level++; }
       if(a.level===MAX_LEVEL) a.xp=0;
     }
-  } else { s.records.defeats++; s.auto = false; }
+  } else { s.records.defeats++; }
   const reason = win ? 'Victory' : e.elapsed >= 180 ? 'Stalemate: recalled after 180 seconds' : 'Defeat: the party was overwhelmed';
   battleNote(e,win?`${e.enemy.name} defeated.`:reason);
   s.lastReport = { depth: e.depth, at: s.clock, seed: e.seed, events: e.events, win, reward, seconds: e.elapsed, reason, frontId: e.frontId,
@@ -172,6 +179,16 @@ function endRoom(s, win) {
   s.reports.unshift(s.lastReport); s.reports.length=Math.min(s.reports.length,8);
   note(s, `${reason} at depth ${e.depth}. ${win ? `+${reward} gold. Party recovered.` : 'Everyone returned safely. Try training, a healer, or a shallower farm.'}`);
   s.expedition = null;
+  if(s.recovery.remaining>0){
+    if(!win){setAuto(s,false);note(s,'Recovery farming failed. Automatic orders stopped; choose a shallower farm or adjust the party.');}
+    else if(--s.recovery.remaining===0){s.policy='push';s.recovery.depth=0;note(s,'Recovery farming complete. Retrying the frontier.');}
+  } else if(!win){
+    if(s.auto&&s.policy==='push'&&s.recovery.enabled&&s.depth>=5){
+      let depth=Math.max(1,Math.floor(s.depth*.8));if(depth%5===0)depth--;
+      s.recovery.depth=depth;s.recovery.remaining=s.recovery.rooms;s.policy='farm';s.farmDepth=depth;
+      note(s,`Recovery orders: farm depth ${depth} for ${s.recovery.rooms} victories, then retry the frontier.`);
+    } else setAuto(s,false);
+  }
 }
 export function tick(s) {
   s.clock++; s.applicantTimer++;
@@ -229,6 +246,9 @@ function validateSave(s) {
   const events = list => Array.isArray(list) && list.length <= 12 && list.every(l => l && int(l.time,180) && typeof l.message === 'string' && l.message.length <= 300);
   if (!s || s.version !== VERSION || !int(s.rng,4294967295) || !int(s.nextId) || !num(s.gold) || !int(s.depth,1000000) || !num(s.savedAt,1e15) || !int(s.clock) || !int(s.applicantTimer,119) || typeof s.auto !== 'boolean' || !['push','farm'].includes(s.policy) || !int(s.farmDepth,1000000) || s.farmDepth < 1) fail();
   if(!s.upgrades) fail(); s.upgrades.mentorship ??= 0;
+  s.recovery ??= {enabled:false,rooms:10,remaining:0,depth:0};
+  const recovery=s.recovery;
+  if(!recovery||typeof recovery.enabled!=='boolean'||![5,10,20].includes(recovery.rooms)||!int(recovery.remaining,recovery.rooms)||!int(recovery.depth,s.depth)||(recovery.enabled&&s.depth<5)||(recovery.remaining>0&&(!recovery.enabled||!s.auto||s.policy!=='farm'||recovery.depth<1||s.farmDepth!==recovery.depth))||(recovery.remaining===0&&recovery.depth!==0))fail();
   if (Object.keys(UPGRADES).some(k => !int(s.upgrades[k], UPGRADES[k].max))) fail();
   s.equipmentUnlocked ??= [];
   if(!Array.isArray(s.equipmentUnlocked) || s.equipmentUnlocked.length>2 || new Set(s.equipmentUnlocked).size!==s.equipmentUnlocked.length || s.equipmentUnlocked.some(k=>!Object.hasOwn(EQUIPMENT,k))) fail();

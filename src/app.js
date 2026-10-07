@@ -9,7 +9,7 @@ try { stored = localStorage.getItem(key); } catch { storageAvailable = false; }
 try { if (stored) ({ state, away } = E.restore(stored)); else state = E.createGame(); }
 catch { state = E.createGame(); storageAvailable = false; $('notice').textContent = 'The existing save could not be read. It has been preserved. Export this new session before closing, or import a valid backup.'; }
 if (!storageAvailable && !stored) $('notice').textContent = 'Browser storage is unavailable. Export your save before closing.';
-if (away?.seconds >= 30) $('away').innerHTML = `<strong>Welcome back, Guildmaster.</strong> ${Math.floor(away.seconds / 60)} minutes resolved · +${away.gold} gold · ${away.wins} victories · ${away.levels} levels · ${away.depth} new depths.${away.defeats ? ' Your party was defeated and automation stopped. Everyone returned safely.' : ''} <button id="dismiss-away">Continue</button>`;
+if (away?.seconds >= 30) $('away').innerHTML = `<strong>Welcome back, Guildmaster.</strong> ${Math.floor(away.seconds / 60)} minutes resolved · +${away.gold} gold · ${away.wins} victories · ${away.levels} levels · ${away.depth} new depths.${away.defeats ? ` Your party suffered defeats. Everyone returned safely. Automatic orders ${state.auto?'are continuing':'stopped'}.` : ''} <button id="dismiss-away">Continue</button>`;
 $('away').onclick = () => { $('away').textContent = ''; };
 function save() { if (!storageAvailable || paused) return; try { localStorage.setItem(key, E.serialize(state)); } catch { storageAvailable = false; $('save-status').textContent = 'Autosave failed. Export your save to preserve progress.'; } }
 window.addEventListener('storage', event => {
@@ -64,6 +64,12 @@ function careerControls(a) {
 function render() {
   const s = state, e = s.expedition, targetDepth = e?.depth || (s.policy==='farm'?Math.min(s.farmDepth,Math.max(1,s.depth)):s.depth+1), region = E.stratum(targetDepth);
   $('gold').textContent = Math.floor(s.gold).toLocaleString();
+  $('recovery-controls').hidden=s.depth<5;
+  $('recover').checked=s.recovery.enabled;
+  $('recovery-rooms').value=s.recovery.rooms;
+  $('recovery-rooms').disabled=!s.recovery.enabled||s.recovery.remaining>0;
+  $('auto-help').textContent=s.recovery.enabled?'Uses recovery orders after a frontier defeat.':'Stops on defeat.';
+  html('recovery-status',s.recovery.remaining?`Recovering at depth ${s.recovery.depth} · ${s.recovery.remaining} victories until frontier retry.`:'');
   html('overview', `<div class="metric"><strong>${s.depth}</strong><span>DEEPEST DELVE<br>${s.depth?'Frontier established':'The unknown awaits'}</span></div><div class="metric"><strong>${s.roster.length}/${E.capacity(s)}</strong><span>ADVENTURERS<br>${s.party.length} assigned to party</span></div><div class="metric"><strong>${s.records.wins}</strong><span>ROOMS CLEARED<br>${s.records.gold.toLocaleString()} gold recovered</span></div>`);
   $('activity').textContent = e ? `In combat · ${e.elapsed}s` : s.auto ? 'Orders active' : 'Awaiting orders';
   $('depth-mark').textContent = `DEPTH ${String(targetDepth).padStart(3,'0')}`;
@@ -71,7 +77,8 @@ function render() {
   html('enemy', e ? `<strong>${esc(e.enemy.name)}</strong>${bar(e.enemy.hp,e.enemy.maxHp,'enemy-bar')}<small>${e.enemy.hp}/${e.enemy.maxHp} HP${e.enemy.shield?` · ${e.enemy.shield} shield`:''}${e.enemy.status.length?' · bleeding':''}</small>` : '<span>A passage into the unknown.</span>');
   const threat = targetDepth % 5 === 0 ? `<strong>Gatekeeper ahead:</strong> ${GATEKEEPERS[Math.floor((targetDepth-1)/10)%3].description}` : '';
   html('region', `<h3>${region.name}</h3><p>${region.subtitle}<br>${region.hazard} ${threat}</p>`);
-  $('policy').value = s.policy; $('farm-depth').max = Math.max(1,s.depth); $('farm-depth').disabled = s.policy !== 'farm'; $('auto').checked = s.auto;
+  $('policy').value = s.policy; $('farm-depth').max = Math.max(1,s.depth); $('farm-depth').disabled = s.policy !== 'farm'||s.recovery.remaining>0; $('auto').checked = s.auto;
+  if(s.recovery.remaining>0)$('farm-depth').value=s.recovery.depth;
   $('start').disabled = !!e || !s.party.length; $('retreat').disabled = !e;
   html('battle-party', e ? e.units.map(u => { const a = s.roster.find(a=>a.id===u.id); return `<div class="battle-unit"><strong>${esc(a.name)}</strong> · ${CLASSES[a.classId].name}${bar(u.hp,u.maxHp)}<small>${u.hp}/${u.maxHp} HP · ${u.shield} shield · ${u.damage} damage · ${u.healing} healing${u.status.length?` · ${u.status.map(x=>x.type).join(", ")}`:""}${u.hp<=0?' · downed':''}</small></div>`; }).join('') : `<p>${esc(partyAdvice(s))}</p><div class="lineup">${s.party.map((id,i)=>{ const a=s.roster.find(a=>a.id===id); return `<div><span>${i+1}. ${esc(a.name)} · ${CLASSES[a.classId].name}</span><button data-action="earlier" data-id="${id}" aria-label="Move ${esc(a.name)} earlier" ${i===0?'disabled':''}>↑</button><button data-action="later" data-id="${id}" aria-label="Move ${esc(a.name)} later" ${i===s.party.length-1?'disabled':''}>↓</button></div>`; }).join('')}</div>`);
   $('party-count').textContent = `${s.party.length}/${E.partySlots(s)} party slots`;
@@ -102,13 +109,15 @@ document.addEventListener('click', event => {
   if (ok) { message(''); save(); render(); }
 });
 document.addEventListener('change',event=>{ if(paused || !event.target.matches('select[data-equip]')) return; if(E.equip(state,Number(event.target.dataset.equip),event.target.value||null)){save();render();} });
+$('recover').onchange = event => { E.configureRecovery(state,event.target.checked); save(); render(); };
+$('recovery-rooms').onchange = event => { E.configureRecovery(state,state.recovery.enabled,Number(event.target.value)); save(); render(); };
 $('start').onclick = () => { state.farmDepth = Math.max(1,Math.min(Math.max(1,state.depth), Math.floor(Number($('farm-depth').value)||1))); E.startExpedition(state); save(); render(); };
 $('retreat').onclick = () => { E.retreat(state); save(); render(); };
 $('refresh').onclick = () => { E.refreshApplicants(state); save(); render(); };
-$('policy').onchange = event => { state.policy = event.target.value; save(); render(); };
+$('policy').onchange = event => { E.setPolicy(state,event.target.value); save(); render(); };
 $('farm-depth').oninput = event => { const n = Number(event.target.value); if (Number.isInteger(n) && n >= 1 && n <= Math.max(1,state.depth)) { state.farmDepth = n; save(); } };
 $('farm-depth').onchange = event => { state.farmDepth = Math.max(1,Math.min(Math.max(1,state.depth), Math.floor(Number(event.target.value)||1))); $('farm-depth').value = state.farmDepth; save(); render(); };
-$('auto').onchange = event => { state.auto = event.target.checked; save(); render(); };
+$('auto').onchange = event => { E.setAuto(state,event.target.checked); save(); render(); };
 $('export').onclick = () => { const blob = new Blob([E.serialize(state)],{type:'application/json'}); const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href=url; a.download='idle-fodder-save.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); };
 $('import').onchange = async event => {
   const file = event.target.files[0]; if (!file) return;

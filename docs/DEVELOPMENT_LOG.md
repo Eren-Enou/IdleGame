@@ -81,3 +81,13 @@ Experiment 010 resolves 3,888 paired frontier/Gatekeeper fights from 90 mixed-in
 Added per-adventurer Guild records for completed-room victories/failures, downings, Gatekeepers, deepest victory and effective damage/healing/shield/cleanse totals. Reserves, mentorship and recalls do not invent battle history. Joining starts a complete record; legacy saves label the earlier past unrecorded and track future results. Open disclosures persist across card updates. All 84 tests pass, including live/offline parity, exact contribution attribution, migration and invalid histories.
 
 Browser verified a legacy record with honest unavailable history, a new depth-5 Gatekeeper victory, precise individual contributions and reload persistence without console errors. Next: compare mentorship with cheaper equipment purchases, then study long-session Guild and expedition agency. Human playtesting remains necessary to assess enjoyment and price expectations.
+
+## 2026-10-06 — Optional recovery expedition orders
+
+Experiment 011 compared 720 next-Gatekeeper replacement fights with actual Gold spending. A 120-Gold Ritual focus pattern for the party often offers a cheap first bridge for a new Guardian/Cleric; mentorship remains more reliable and combining both helps later fights. Kept both choices and current costs.
+
+Added recovery orders after depth 5. With automatic repeats enabled, a frontier defeat can queue 5/10/20 victories at 80% of deepest depth, avoiding Gatekeepers, before resuming push. A failed recovery farm stops automation. Recall, order changes, disabling repeats or disabling recovery cancels the queue. Defaults preserve stop-on-defeat. Queue status, fixed farm target, configuration locks and return summaries explain the current plan. No purchases are automated.
+
+All 92 tests pass, including scheduling, victory counts, failure stops, cancellation, save validation and offline/live parity. Experiment 012 runs 240 unattended scenarios with complete save round-trips; longer recovery farms produce more XP and fewer losses in these uninvested samples. Browser used a temporary solo party to trigger frontier failure, confirmed the depth-18 queue and target lock, reloaded with the plan intact, then verified farm failure stopped orders. Restored the full party and normal farm controls; no console errors.
+
+Next: study recovery with different investments and farm-depth choices, plus long-session Guild/expedition progression. The new order strengthens idle planning while retaining preparation choices; avoid adding unrelated automation or currencies.
